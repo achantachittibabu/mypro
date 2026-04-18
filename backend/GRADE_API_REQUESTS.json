@@ -1,0 +1,144 @@
+{
+  "CREATE_GRADE_MINIMAL": {
+    "description": "Minimal required fields to create a grade record",
+    "endpoint": "POST /api/grades",
+    "body": {
+      "username": "john_student",
+      "userType": "student",
+      "class": "10-A",
+      "subject": "Mathematics",
+      "marksObtained": 85,
+      "gradePoint": "A",
+      "gradePercentage": 85,
+      "examType": "final",
+      "examDate": "2026-02-10"
+    }
+  },
+  "CREATE_GRADE_FULL": {
+    "description": "Complete grade record with all optional fields",
+    "endpoint": "POST /api/grades",
+    "body": {
+      "student": "507f1f77bcf86cd799439011",
+      "username": "john_student",
+      "userType": "student",
+      "class": "10-A",
+      "section": "Section-1",
+      "subject": "Mathematics",
+      "marksObtained": 85,
+      "totalMarks": 100,
+      "gradePoint": "A",
+      "gradePercentage": 85,
+      "examType": "final",
+      "examDate": "2026-02-10",
+      "remarks": "Excellent performance in final exam",
+      "recordedBy": "teacher_admin"
+    }
+  },
+  "CREATE_GRADE_MIDTERM": {
+    "description": "Grade record for midterm exam",
+    "endpoint": "POST /api/grades",
+    "body": {
+      "username": "sarah_student",
+      "userType": "student",
+      "class": "9-B",
+      "section": "Section-2",
+      "subject": "Science",
+      "marksObtained": 72,
+      "totalMarks": 100,
+      "gradePoint": "B+",
+      "gradePercentage": 72,
+      "examType": "midterm",
+      "examDate": "2026-01-15",
+      "remarks": "Good understanding of concepts",
+      "recordedBy": "science_teacher"
+    }
+  },
+  "CREATE_GRADE_UNIT_TEST": {
+    "description": "Grade record for unit test",
+    "endpoint": "POST /api/grades",
+    "body": {
+      "username": "mike_student",
+      "userType": "student",
+      "class": "11-A",
+      "subject": "English",
+      "marksObtained": 88,
+      "totalMarks": 100,
+      "gradePoint": "A",
+      "gradePercentage": 88,
+      "examType": "unit-test",
+      "examDate": "2026-02-05",
+      "remarks": "Excellent writing skills demonstrated",
+      "recordedBy": "english_teacher"
+    }
+  },
+  "CREATE_GRADE_ASSIGNMENT": {
+    "description": "Grade record for assignment",
+    "endpoint": "POST /api/grades",
+    "body": {
+      "username": "alice_student",
+      "userType": "student",
+      "class": "12-A",
+      "subject": "History",
+      "marksObtained": 95,
+      "totalMarks": 100,
+      "gradePoint": "A+",
+      "gradePercentage": 95,
+      "examType": "assignment",
+      "examDate": "2026-02-12",
+      "remarks": "Outstanding research and presentation",
+      "recordedBy": "history_teacher"
+    }
+  },
+  "UPDATE_GRADE": {
+    "description": "Update an existing grade record",
+    "endpoint": "PUT /api/grades/{gradeId}",
+    "body": {
+      "marksObtained": 90,
+      "gradePoint": "A+",
+      "gradePercentage": 90,
+      "remarks": "Updated - Exceptional performance"
+    }
+  },
+  "GET_ALL_GRADES": {
+    "description": "Get all grades in the system",
+    "endpoint": "GET /api/grades",
+    "method": "GET"
+  },
+  "GET_GRADE_BY_ID": {
+    "description": "Get a specific grade by ID",
+    "endpoint": "GET /api/grades/{gradeId}",
+    "method": "GET",
+    "example_id": "507f1f77bcf86cd799439015"
+  },
+  "GET_GRADES_BY_USERNAME": {
+    "description": "Get all grades for a specific student",
+    "endpoint": "GET /api/grades/username/{username}",
+    "method": "GET",
+    "example_username": "john_student"
+  },
+  "GET_GRADES_BY_USERTYPE": {
+    "description": "Get all grades for a specific user type",
+    "endpoint": "GET /api/grades/usertype/{usertype}",
+    "method": "GET",
+    "valid_values": ["student", "teacher", "admin", "parent"],
+    "example_usertype": "student"
+  },
+  "GET_GRADES_BY_CLASS": {
+    "description": "Get all grades for a specific class",
+    "endpoint": "GET /api/grades/class/{class}",
+    "method": "GET",
+    "example_class": "10-A"
+  },
+  "GET_GRADES_BY_STUDENT_ID": {
+    "description": "Get all grades for a specific student by ObjectId",
+    "endpoint": "GET /api/grades/student/{studentId}",
+    "method": "GET",
+    "example_id": "507f1f77bcf86cd799439011"
+  },
+  "DELETE_GRADE": {
+    "description": "Delete a grade record",
+    "endpoint": "DELETE /api/grades/{gradeId}",
+    "method": "DELETE",
+    "example_id": "507f1f77bcf86cd799439015"
+  }
+}

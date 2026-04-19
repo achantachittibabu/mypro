@@ -29,6 +29,9 @@ import AssignmentsScreen from './screens/AssignmentsScreen';
 import AssignmentDetailScreen from './screens/AssignmentDetailScreen';
 import ExamsScreen from './screens/ExamsScreen';
 import ExamDetailScreen from './screens/ExamDetailScreen';
+import CreateExamScreen from './screens/CreateExamScreen';
+import ExamResultsScreen from './screens/ExamResultsScreen';
+import ExamPapersScreen from './screens/ExamPapersScreen';
 import LibraryScreen from './screens/LibraryScreen';
 import LibraryDetailScreen from './screens/LibraryDetailScreen';
 import AddBookScreen from './screens/AddBookScreen';
@@ -42,6 +45,7 @@ import BookTrackingScreen from './screens/BookTrackingScreen';
 import BookOverdueRequestsScreen from './screens/BookOverdueRequestsScreen';
 import FeePaymentScreen from './screens/FeePaymentScreen';
 import FeePaymentDetailScreen from './screens/FeePaymentDetailScreen';
+import SearchStudentScreen from './screens/SearchStudentScreen';
 import TransportScreen from './screens/TransportScreen';
 import TransportDetailScreen from './screens/TransportDetailScreen';
 import MessagesScreen from './screens/MessagesScreen';
@@ -275,6 +279,30 @@ export default function App() {
         }}
         />
         <Stack.Screen 
+          name="CreateExam" 
+          component={CreateExamScreen}
+          //options={{ title: 'Create Exam' }}
+          screenOptions={{
+          headerShown: false,
+        }}
+        />
+        <Stack.Screen 
+          name="ExamResults" 
+          component={ExamResultsScreen}
+          //options={{ title: 'Exam Results' }}
+          screenOptions={{
+          headerShown: false,
+        }}
+        />
+        <Stack.Screen 
+          name="ExamPapers" 
+          component={ExamPapersScreen}
+          //options={{ title: 'Exam Papers' }}
+          screenOptions={{
+          headerShown: false,
+        }}
+        />
+        <Stack.Screen 
           name="Library" 
           component={LibraryScreen}
           //options={{ title: 'Library' }}
@@ -366,6 +394,14 @@ export default function App() {
           name="FeePayment" 
           component={FeePaymentScreen}
           //options={{ title: 'Fee Payment' }}
+          screenOptions={{
+          headerShown: false,
+        }}
+        />
+        <Stack.Screen 
+          name="SearchStudent" 
+          component={SearchStudentScreen}
+          //options={{ title: 'Search Student' }}
           screenOptions={{
           headerShown: false,
         }}

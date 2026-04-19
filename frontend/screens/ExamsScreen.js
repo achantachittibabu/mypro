@@ -4,365 +4,688 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
-  TouchableOpacity,
   FlatList,
-  Modal,
-  TextInput,
-  ActivityIndicator,
+  TouchableOpacity,
   Dimensions,
+  RefreshControl,
 } from 'react-native';
-import { Card, Title, Text, Button, Divider, IconButton, FAB } from 'react-native-paper';
+import {
+  Card,
+  Title,
+  Text,
+  Button,
+  Divider,
+  ActivityIndicator,
+  Chip,
+  FAB,
+  Portal,
+  Dialog,
+  Paragraph,
+} from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import axios from 'axios';
 
+const { width } = Dimensions.get('window');
+
 const ExamsScreen = ({ navigation, route }) => {
   const [user, setUser] = useState(null);
-  const [currentDate, setCurrentDate] = useState(new Date());
   const [examsData, setExamsData] = useState([]);
-  const [selectedDateExams, setSelectedDateExams] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(null);
-  const [showPicker, setShowPicker] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [activeTab, setActiveTab] = useState('exams'); // 'exams', 'results', 'papers'
+  const [fabOpen, setFabOpen] = useState(false);
+  const [expandedExamId, setExpandedExamId] = useState(null);
+  const [expandedClassId, setExpandedClassId] = useState(null);
+
+  const mockExamsData = [
+    // Mid-Term 2026
+    {
+      id: 'MT001',
+      examType: 'Mid-Term',
+      examName: 'Mid-Term 2026',
+      class: '9A',
+      date: '2026-05-15',
+      time: '09:00 AM',
+      duration: '2.5 hours',
+      totalMarks: 80,
+      passingMarks: 32,
+      subject: 'Mathematics',
+      status: 'upcoming',
+    },
+    {
+      id: 'MT002',
+      examType: 'Mid-Term',
+      examName: 'Mid-Term 2026',
+      class: '9A',
+      date: '2026-05-15',
+      time: '01:00 PM',
+      duration: '2 hours',
+      totalMarks: 70,
+      passingMarks: 28,
+      subject: 'English',
+      status: 'upcoming',
+    },
+    {
+      id: 'MT003',
+      examType: 'Mid-Term',
+      examName: 'Mid-Term 2026',
+      class: '9A',
+      date: '2026-05-16',
+      time: '09:00 AM',
+      duration: '2.5 hours',
+      totalMarks: 90,
+      passingMarks: 36,
+      subject: 'Science',
+      status: 'upcoming',
+    },
+    {
+      id: 'MT004',
+      examType: 'Mid-Term',
+      examName: 'Mid-Term 2026',
+      class: '9A',
+      date: '2026-05-16',
+      time: '02:00 PM',
+      duration: '2 hours',
+      totalMarks: 75,
+      passingMarks: 30,
+      subject: 'Social Studies',
+      status: 'upcoming',
+    },
+    {
+      id: 'MT005',
+      examType: 'Mid-Term',
+      examName: 'Mid-Term 2026',
+      class: '10A',
+      date: '2026-05-15',
+      time: '09:00 AM',
+      duration: '3 hours',
+      totalMarks: 100,
+      passingMarks: 40,
+      subject: 'Mathematics',
+      status: 'upcoming',
+    },
+    {
+      id: 'MT006',
+      examType: 'Mid-Term',
+      examName: 'Mid-Term 2026',
+      class: '10A',
+      date: '2026-05-15',
+      time: '01:00 PM',
+      duration: '2.5 hours',
+      totalMarks: 80,
+      passingMarks: 32,
+      subject: 'English',
+      status: 'upcoming',
+    },
+    {
+      id: 'MT007',
+      examType: 'Mid-Term',
+      examName: 'Mid-Term 2026',
+      class: '10A',
+      date: '2026-05-16',
+      time: '09:00 AM',
+      duration: '3 hours',
+      totalMarks: 100,
+      passingMarks: 40,
+      subject: 'Science',
+      status: 'upcoming',
+    },
+    {
+      id: 'MT008',
+      examType: 'Mid-Term',
+      examName: 'Mid-Term 2026',
+      class: '10A',
+      date: '2026-05-16',
+      time: '02:00 PM',
+      duration: '2.5 hours',
+      totalMarks: 85,
+      passingMarks: 34,
+      subject: 'Social Studies',
+      status: 'upcoming',
+    },
+    {
+      id: 'MT009',
+      examType: 'Mid-Term',
+      examName: 'Mid-Term 2026',
+      class: '10B',
+      date: '2026-05-15',
+      time: '09:30 AM',
+      duration: '3 hours',
+      totalMarks: 100,
+      passingMarks: 40,
+      subject: 'Mathematics',
+      status: 'upcoming',
+    },
+    {
+      id: 'MT010',
+      examType: 'Mid-Term',
+      examName: 'Mid-Term 2026',
+      class: '10B',
+      date: '2026-05-15',
+      time: '01:30 PM',
+      duration: '2.5 hours',
+      totalMarks: 80,
+      passingMarks: 32,
+      subject: 'English',
+      status: 'upcoming',
+    },
+    // Unit Test April
+    {
+      id: 'UT001',
+      examType: 'Unit Test',
+      examName: 'Unit Test April',
+      class: '9A',
+      date: '2026-04-20',
+      time: '10:00 AM',
+      duration: '1.5 hours',
+      totalMarks: 50,
+      passingMarks: 20,
+      subject: 'Hindi',
+      status: 'upcoming',
+    },
+    {
+      id: 'UT002',
+      examType: 'Unit Test',
+      examName: 'Unit Test April',
+      class: '9A',
+      date: '2026-04-21',
+      time: '10:00 AM',
+      duration: '1 hour',
+      totalMarks: 40,
+      passingMarks: 16,
+      subject: 'Computer Science',
+      status: 'upcoming',
+    },
+    {
+      id: 'UT003',
+      examType: 'Unit Test',
+      examName: 'Unit Test April',
+      class: '10A',
+      date: '2026-04-20',
+      time: '10:30 AM',
+      duration: '1.5 hours',
+      totalMarks: 60,
+      passingMarks: 24,
+      subject: 'Hindi',
+      status: 'upcoming',
+    },
+    {
+      id: 'UT004',
+      examType: 'Unit Test',
+      examName: 'Unit Test April',
+      class: '10A',
+      date: '2026-04-21',
+      time: '10:30 AM',
+      duration: '1.5 hours',
+      totalMarks: 50,
+      passingMarks: 20,
+      subject: 'Computer Science',
+      status: 'upcoming',
+    },
+    {
+      id: 'UT005',
+      examType: 'Unit Test',
+      examName: 'Unit Test April',
+      class: '10B',
+      date: '2026-04-20',
+      time: '11:00 AM',
+      duration: '1.5 hours',
+      totalMarks: 60,
+      passingMarks: 24,
+      subject: 'Hindi',
+      status: 'upcoming',
+    },
+    // Final Exams 2026
+    {
+      id: 'FE001',
+      examType: 'Final Exam',
+      examName: 'Final Exams 2026',
+      class: '9A',
+      date: '2026-06-01',
+      time: '08:00 AM',
+      duration: '2.5 hours',
+      totalMarks: 80,
+      passingMarks: 32,
+      subject: 'Mathematics',
+      status: 'completed',
+    },
+    {
+      id: 'FE002',
+      examType: 'Final Exam',
+      examName: 'Final Exams 2026',
+      class: '9A',
+      date: '2026-06-02',
+      time: '08:00 AM',
+      duration: '2 hours',
+      totalMarks: 70,
+      passingMarks: 28,
+      subject: 'English',
+      status: 'completed',
+    },
+    {
+      id: 'FE003',
+      examType: 'Final Exam',
+      examName: 'Final Exams 2026',
+      class: '9A',
+      date: '2026-06-03',
+      time: '08:00 AM',
+      duration: '2.5 hours',
+      totalMarks: 90,
+      passingMarks: 36,
+      subject: 'Science',
+      status: 'completed',
+    },
+    {
+      id: 'FE004',
+      examType: 'Final Exam',
+      examName: 'Final Exams 2026',
+      class: '10A',
+      date: '2026-06-01',
+      time: '08:30 AM',
+      duration: '3 hours',
+      totalMarks: 100,
+      passingMarks: 40,
+      subject: 'Mathematics',
+      status: 'completed',
+    },
+    {
+      id: 'FE005',
+      examType: 'Final Exam',
+      examName: 'Final Exams 2026',
+      class: '10A',
+      date: '2026-06-02',
+      time: '08:30 AM',
+      duration: '2.5 hours',
+      totalMarks: 80,
+      passingMarks: 32,
+      subject: 'English',
+      status: 'completed',
+    },
+    {
+      id: 'FE006',
+      examType: 'Final Exam',
+      examName: 'Final Exams 2026',
+      class: '10A',
+      date: '2026-06-03',
+      time: '08:30 AM',
+      duration: '3 hours',
+      totalMarks: 100,
+      passingMarks: 40,
+      subject: 'Science',
+      status: 'completed',
+    },
+    {
+      id: 'FE007',
+      examType: 'Final Exam',
+      examName: 'Final Exams 2026',
+      class: '10B',
+      date: '2026-06-01',
+      time: '09:00 AM',
+      duration: '3 hours',
+      totalMarks: 100,
+      passingMarks: 40,
+      subject: 'Mathematics',
+      status: 'completed',
+    },
+    {
+      id: 'FE008',
+      examType: 'Final Exam',
+      examName: 'Final Exams 2026',
+      class: '10B',
+      date: '2026-06-02',
+      time: '09:00 AM',
+      duration: '2.5 hours',
+      totalMarks: 80,
+      passingMarks: 32,
+      subject: 'English',
+      status: 'completed',
+    },
+  ];
 
   useEffect(() => {
-    if (route.params?.userData) setUser(route.params.userData);
+    if (route.params?.userData) {
+      setUser(route.params.userData);
+    }
+    fetchExams();
   }, [route.params]);
 
-  // Fetch all exams for the current month
-  const fetchExams = async (date = currentDate) => {
+  const fetchExams = async () => {
     setLoading(true);
     try {
-      const year = date.getFullYear();
-      const month = date.getMonth() + 1;
-      console.log(`Fetching exams for ${month}/${year}`);
-      
-      const response = await axios.get('http://localhost:5000/api/exams', {
-        params: {
-          userid: user?.userid,
-          year,
-          month,
-        },
-      });
-      setExamsData(response.data.data || []);
-      console.log('Exams fetched:', response.data.data);
+      const response = await axios.get('http://localhost:5000/api/exams');
+      setExamsData(response.data.data || mockExamsData);
     } catch (error) {
-      console.error('Error fetching exams:', error);
-      Alert.alert('Error', 'Failed to fetch exams');
-    }
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    if (user) fetchExams();
-  }, [user]);
-
-  // Get exams for specific date
-  const getExamsForDate = (date) => {
-    const dateStr = date.toISOString().split('T')[0];
-    return examsData.filter(exam => exam.date === dateStr);
-  };
-
-  // Get calendar days
-  const getDaysInMonth = (date) => {
-    return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
-  };
-
-  const getFirstDayOfMonth = (date) => {
-    return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
-  };
-
-  const handlePreviousMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1));
-  };
-
-  const handleNextMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1));
-  };
-
-  const handleDatePress = (day) => {
-    const selectedDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
-    setSelectedDate(selectedDay);
-    const exams = getExamsForDate(selectedDay);
-    setSelectedDateExams(exams);
-  };
-
-  const handleAddExam = () => {
-    if (!selectedDate) {
-      Alert.alert('Error', 'Please select a date first');
-      return;
-    }
-    navigation.navigate('ExamDetail', {
-      userData: user,
-      examDate: selectedDate,
-      isNew: true,
-    });
-  };
-
-  // Render calendar grid
-  const renderCalendarDays = () => {
-    const daysInMonth = getDaysInMonth(currentDate);
-    const firstDay = getFirstDayOfMonth(currentDate);
-    const days = [];
-
-    // Empty cells for days before month starts
-    for (let i = 0; i < firstDay; i++) {
-      days.push(<View key={`empty-${i}`} style={styles.emptyDay} />);
-    }
-
-    // Days of month
-    for (let day = 1; day <= daysInMonth; day++) {
-      const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
-      const dateStr = date.toISOString().split('T')[0];
-      const hasExams = examsData.some(exam => exam.date === dateStr);
-      const isSelected = selectedDate && selectedDate.toDateString() === date.toDateString();
-
-      days.push(
-        <TouchableOpacity
-          key={day}
-          style={[
-            styles.dayButton,
-            hasExams && styles.dayWithExams,
-            isSelected && styles.daySelected,
-          ]}
-          onPress={() => handleDatePress(day)}
-        >
-          <Text style={[styles.dayText, isSelected && styles.dayTextSelected]}>
-            {day}
-          </Text>
-          {hasExams && <View style={styles.examIndicator} />}
-        </TouchableOpacity>
-      );
-    }
-
-    return days;
-  };
-
-  const handleRefresh = () => {
-    fetchExams();
-  };
-
-  // Delete exam
-  const handleDeleteExam = (examId) => {
-    Alert.alert('Confirm Delete', 'Are you sure you want to delete this exam?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        onPress: () => confirmDelete(examId),
-        style: 'destructive',
-      },
-    ]);
-  };
-
-  const confirmDelete = async (examId) => {
-    setLoading(true);
-    try {
-      console.log('Deleting exam:', examId);
-      await axios.delete(`http://localhost:5000/api/exams/${examId}`);
-      
-      console.log('Exam deleted successfully');
-      Alert.alert('Success', 'Exam deleted successfully!');
-      
-      // Remove exam from local state
-      setExamsData(examsData.filter(exam => exam.examid !== examId));
-      
-      // Refresh selected date exams if any
-      if (selectedDate) {
-        const updatedSelectedDateExams = selectedDateExams.filter(exam => exam.examid !== examId);
-        setSelectedDateExams(updatedSelectedDateExams);
-      }
-    } catch (error) {
-      console.error('Error deleting exam:', error);
-      Alert.alert('Error', error.response?.data?.message || 'Failed to delete exam');
+      console.log('Using mock data:', error);
+      setExamsData(mockExamsData);
     } finally {
       setLoading(false);
     }
   };
 
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchExams();
+    setRefreshing(false);
+  };
+
+  // Sort exams by date (latest first)
+  const sortedExams = [...examsData].sort((a, b) => {
+    const dateA = new Date(a.date);
+    const dateB = new Date(b.date);
+    return dateB - dateA;
+  });
+
+  // Group exams by examName
+  const groupedExams = sortedExams.reduce((acc, exam) => {
+    const existingExam = acc.find(e => e.examName === exam.examName);
+    if (existingExam) {
+      existingExam.classes.push(exam);
+    } else {
+      acc.push({
+        examName: exam.examName,
+        examId: exam.id,
+        date: exam.date,
+        classes: [exam]
+      });
+    }
+    return acc;
+  }, []);
+
+  // Group classes by class name within each exam
+  const groupClassesByName = (classes) => {
+    return classes.reduce((acc, classItem) => {
+      const existingClass = acc.find(c => c.className === classItem.class);
+      if (existingClass) {
+        existingClass.exams.push(classItem);
+      } else {
+        acc.push({
+          className: classItem.class,
+          exams: [classItem]
+        });
+      }
+      return acc;
+    }, []);
+  };
+
+  const handleCreateExam = () => {
+    setFabOpen(false);
+    navigation.navigate('CreateExam', { userData: user });
+  };
+
+  const handleViewResults = () => {
+    setFabOpen(false);
+    navigation.navigate('ExamResults', { userData: user });
+  };
+
+  const handleViewPapers = () => {
+    setFabOpen(false);
+    navigation.navigate('ExamPapers', { userData: user });
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'upcoming':
+        return '#2196F3';
+      case 'completed':
+        return '#4CAF50';
+      case 'cancelled':
+        return '#F44336';
+      default:
+        return '#999';
+    }
+  };
+
+  const getStatusLabel = (status) => {
+    return status.charAt(0).toUpperCase() + status.slice(1);
+  };
+
+  const toggleExpandExam = (examName) => {
+    setExpandedExamId(expandedExamId === examName ? null : examName);
+    setExpandedClassId(null);
+  };
+
+  const toggleExpandClass = (classKey) => {
+    setExpandedClassId(expandedClassId === classKey ? null : classKey);
+  };
+
+  const renderClassExamDetails = (exam) => (
+    <View key={exam.id} style={styles.classExamItem}>
+      <View style={styles.examDetailContainer}>
+        <View style={styles.examDetailLeft}>
+          <Text style={styles.examSubjectText}>{exam.subject}</Text>
+          <Text style={styles.examDateText}>{exam.date}</Text>
+        </View>
+        <View style={styles.examDetailRight}>
+          <Text style={styles.examDetailText}>
+            {exam.time} • {exam.examType}
+          </Text>
+          <Text style={styles.examMarksText}>
+            {exam.totalMarks}m / {exam.passingMarks}p
+          </Text>
+        </View>
+      </View>
+    </View>
+  );
+
+  const renderClassItem = (classGroup, examName) => {
+    const classKey = `${examName}-${classGroup.className}`;
+    const isClassExpanded = expandedClassId === classKey;
+
+    return (
+      <View key={classKey} style={styles.classItemContainer}>
+        <TouchableOpacity
+          style={styles.classButton}
+          onPress={() => toggleExpandClass(classKey)}
+        >
+          <Text style={styles.classButtonText}>{classGroup.className}</Text>
+          <Icon
+            name={isClassExpanded ? 'chevron-up' : 'chevron-down'}
+            size={16}
+            color="#FFF"
+          />
+        </TouchableOpacity>
+
+        {isClassExpanded && (
+          <View style={styles.classExamsContainer}>
+            {classGroup.exams.map(exam => renderClassExamDetails(exam))}
+          </View>
+        )}
+      </View>
+    );
+  };
+
+  const renderExamListItem = (examGroup) => {
+    const isExpanded = expandedExamId === examGroup.examName;
+    const classGroups = groupClassesByName(examGroup.classes);
+
+    return (
+      <Card key={examGroup.examId} style={styles.listItemCard}>
+        <Card.Content style={styles.listItemContent}>
+          {/* Main Row: Exam Name Button + Date */}
+          <View style={styles.listItemMainRow}>
+            <TouchableOpacity
+              style={styles.examNameButton}
+              onPress={() => toggleExpandExam(examGroup.examName)}
+            >
+              <Icon
+                name={isExpanded ? 'chevron-down' : 'chevron-right'}
+                size={24}
+                color="#1976D2"
+              />
+              <Text style={styles.examNameButtonText}>{examGroup.examName}</Text>
+            </TouchableOpacity>
+            <View style={styles.dateContainer}>
+              <Icon name="calendar" size={16} color="#666" />
+              <Text style={styles.dateText}>{examGroup.date}</Text>
+            </View>
+          </View>
+
+          {/* Expanded: Show All Classes */}
+          {isExpanded && (
+            <>
+              <Divider style={styles.expandedDivider} />
+              <View style={styles.classesListContainer}>
+                {classGroups.map(classGroup => 
+                  renderClassItem(classGroup, examGroup.examName)
+                )}
+              </View>
+            </>
+          )}
+        </Card.Content>
+      </Card>
+    );
+  };
+
+  const renderTabButton = (tabName, label, icon) => (
+    <TouchableOpacity
+      style={[
+        styles.tabButton,
+        activeTab === tabName && styles.tabButtonActive,
+      ]}
+      onPress={() => setActiveTab(tabName)}
+    >
+      <Icon
+        name={icon}
+        size={20}
+        color={activeTab === tabName ? '#1976D2' : '#666'}
+      />
+      <Text
+        style={[
+          styles.tabLabel,
+          activeTab === tabName && styles.tabLabelActive,
+        ]}
+      >
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
+
   return (
     <View style={styles.container}>
-      {/* Header with Month Navigation */}
+      {/* Header */}
       <View style={styles.header}>
-        <IconButton
-          icon="chevron-left"
-          size={28}
-          onPress={handlePreviousMonth}
-          style={styles.navButton}
-        />
-        <Title style={styles.monthTitle}>
-          {currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
-        </Title>
-        <IconButton
-          icon="chevron-right"
-          size={28}
-          onPress={handleNextMonth}
-          style={styles.navButton}
-        />
+        <Title style={styles.headerTitle}>Exams & Results</Title>
+        <Text style={styles.headerSubtitle}>
+          Manage and track your exams
+        </Text>
       </View>
 
-      {/* Weekday Headers */}
-      <View style={styles.weekdayContainer}>
-        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-          <View key={day} style={styles.weekdayCell}>
-            <Text style={styles.weekdayText}>{day}</Text>
-          </View>
-        ))}
+      {/* Tabs/Navigation Buttons */}
+      <View style={styles.tabContainer}>
+        {renderTabButton('exams', 'Latest Exams', 'calendar-outline')}
+        {renderTabButton('results', 'Results', 'chart-line')}
+        {renderTabButton('papers', 'Papers', 'file-document')}
       </View>
 
-      {/* Calendar Grid */}
-      <ScrollView style={styles.scrollView}>
-        {loading && (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#F44336" />
-          </View>
-        )}
-        
-        <View style={styles.calendarGrid}>
-          {renderCalendarDays()}
+      {/* Content Area */}
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#1976D2" />
+          <Text style={styles.loadingText}>Loading exams...</Text>
         </View>
-
-        {/* Selected Date Exams */}
-        {selectedDate && (
-          <Card style={styles.selectedDateCard}>
-            <Card.Content>
-              <View style={styles.selectedDateHeader}>
-                <Title style={styles.selectedDateTitle}>
-                  {selectedDate.toLocaleDateString('default', {
-                    weekday: 'long',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                  })}
-                </Title>
-                <Button
-                  mode="outlined"
-                  onPress={handleAddExam}
-                  style={styles.addButton}
-                  icon="plus"
-                >
-                  Add Exam
-                </Button>
-              </View>
-
-              <Divider style={styles.divider} />
-
-              {selectedDateExams.length > 0 ? (
+      ) : (
+        <ScrollView
+          style={styles.content}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+        >
+          {activeTab === 'exams' && (
+            <View style={styles.tabContent}>
+              <Text style={styles.sectionHeader}>Exam Schedule</Text>
+              {groupedExams.length > 0 ? (
                 <FlatList
-                  data={selectedDateExams}
-                  renderItem={({ item }) => (
-                    <TouchableOpacity
-                      style={styles.examCard}
-                      onPress={() =>
-                        navigation.navigate('ExamDetail', {
-                          userData: user,
-                          examData: item,
-                          isNew: false,
-                        })
-                      }
-                    >
-                      <View style={styles.examCardContent}>
-                        <View style={styles.examInfo}>
-                          <Text style={styles.examSubject}>{item.subject}</Text>
-                          <View style={styles.examMeta}>
-                            <Icon name="clock" size={14} color="#666" />
-                            <Text style={styles.examTime}>{item.time}</Text>
-                          </View>
-                          {item.room && (
-                            <View style={styles.examMeta}>
-                              <Icon name="door" size={14} color="#666" />
-                              <Text style={styles.examRoom}>Room {item.room}</Text>
-                            </View>
-                          )}
-                        </View>
-                        <Icon name="chevron-right" size={24} color="#F44336" />
-                      </View>
-                    </TouchableOpacity>
-                  )}
-                  keyExtractor={(item) => item.examid?.toString() || Math.random().toString()}
+                  data={groupedExams}
+                  renderItem={({ item }) => renderExamListItem(item)}
+                  keyExtractor={(item) => item.examId}
                   scrollEnabled={false}
+                  nestedScrollEnabled={true}
                 />
               ) : (
-                <View style={styles.noExamsContainer}>
-                  <Icon name="calendar-blank" size={40} color="#ccc" />
-                  <Text style={styles.noExamsText}>No exams on this date</Text>
-                  <Button
-                    mode="contained"
-                    onPress={handleAddExam}
-                    style={styles.addExamButton}
-                  >
-                    Add First Exam
-                  </Button>
+                <View style={styles.emptyContainer}>
+                  <Icon name="calendar-blank" size={80} color="#DDD" />
+                  <Text style={styles.emptyText}>No exams scheduled</Text>
                 </View>
               )}
-            </Card.Content>
-          </Card>
-        )}
+            </View>
+          )}
 
-        {/* Monthly Exams Table */}
-        {examsData.length > 0 && (
-          <Card style={styles.monthlyExamsCard}>
-            <Card.Content>
-              <Title style={styles.tableTitle}>All Exams - {currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}</Title>
-              <Divider style={styles.divider} />
-              
-              {/* Table Header */}
-              <View style={styles.tableHeader}>
-                <Text style={[styles.tableHeaderCell, { flex: 2 }]}>Date</Text>
-                <Text style={[styles.tableHeaderCell, { flex: 2 }]}>Class</Text>
-                <Text style={[styles.tableHeaderCell, { flex: 2.5 }]}>Subject</Text>
-                <Text style={[styles.tableHeaderCell, { flex: 1.5 }]}>Time</Text>
-                <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Room</Text>
-              </View>
-
-              {/* Table Rows */}
-              <FlatList
-                data={examsData}
-                renderItem={({ item, index }) => (
-                  <View
-                    style={[styles.tableRow, index % 2 === 0 && styles.tableRowAlternate]}
+          {activeTab === 'results' && (
+            <View style={styles.tabContent}>
+              <Text style={styles.sectionHeader}>View Exam Results</Text>
+              <Card style={styles.resultCard}>
+                <Card.Content>
+                  <Paragraph style={styles.resultDescription}>
+                    Search for your exam results using your hall ticket or roll
+                    number.
+                  </Paragraph>
+                  <Button
+                    mode="contained"
+                    icon="magnify"
+                    style={styles.resultButton}
+                    onPress={handleViewResults}
                   >
-                    <TouchableOpacity
-                      style={styles.tableRowContent}
-                      onPress={() =>
-                        navigation.navigate('ExamDetail', {
-                          userData: user,
-                          examData: item,
-                          isNew: false,
-                        })
-                      }
-                    >
-                      <Text style={[styles.tableCell, { flex: 2 }]}>{item.date}</Text>
-                      <Text style={[styles.tableCell, { flex: 2 }]}>{item.class}</Text>
-                      <Text style={[styles.tableCell, { flex: 2.5 }]}>{item.subject}</Text>
-                      <Text style={[styles.tableCell, { flex: 1.5 }]}>{item.time}</Text>
-                      <Text style={[styles.tableCell, { flex: 1 }]}>{item.room || '-'}</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.deleteButton}
-                      onPress={() => handleDeleteExam(item.examid)}
-                    >
-                      <Icon name="trash-can" size={18} color="#F44336" />
-                    </TouchableOpacity>
-                  </View>
-                )}
-                keyExtractor={(item) => item.examid?.toString() || Math.random().toString()}
-                scrollEnabled={false}
-              />
-            </Card.Content>
-          </Card>
-        )}
+                    Search Results
+                  </Button>
+                </Card.Content>
+              </Card>
+            </View>
+          )}
 
-        {/* Action Buttons */}
-        <View style={styles.actionButtons}>
-          <Button
-            mode="contained"
-            onPress={handleRefresh}
-            loading={loading}
-            style={styles.refreshButton}
-          >
-            Refresh
-          </Button>
-        </View>
-      </ScrollView>
+          {activeTab === 'papers' && (
+            <View style={styles.tabContent}>
+              <Text style={styles.sectionHeader}>
+                Download Question Papers
+              </Text>
+              <Card style={styles.resultCard}>
+                <Card.Content>
+                  <Paragraph style={styles.resultDescription}>
+                    Download question papers for your exams.
+                  </Paragraph>
+                  <Button
+                    mode="contained"
+                    icon="download"
+                    style={styles.resultButton}
+                    onPress={handleViewPapers}
+                  >
+                    View Papers
+                  </Button>
+                </Card.Content>
+              </Card>
+            </View>
+          )}
+        </ScrollView>
+      )}
+
+      {/* Floating Action Buttons */}
+      <Portal>
+        <FAB.Group
+          open={fabOpen}
+          onStateChange={({ open }) => setFabOpen(open)}
+          icon={fabOpen ? 'close' : 'plus'}
+          fabStyle={styles.fab}
+          actions={[
+            {
+              icon: 'plus-circle',
+              label: 'New Exam Schedule',
+              onPress: handleCreateExam,
+              style: styles.fabAction,
+            },
+            {
+              icon: 'file-document-outline',
+              label: 'Question Papers',
+              onPress: handleViewPapers,
+              style: styles.fabAction,
+            },
+            {
+              icon: 'chart-line',
+              label: 'Results',
+              onPress: handleViewResults,
+              style: styles.fabAction,
+            },
+          ]}
+        />
+      </Portal>
     </View>
   );
 };
@@ -370,226 +693,263 @@ const ExamsScreen = ({ navigation, route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#F5F5F5',
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#F44336',
-    paddingVertical: 16,
+    backgroundColor: '#1976D2',
     paddingHorizontal: 16,
-    elevation: 4,
+    paddingTop: 16,
+    paddingBottom: 8,
   },
-  navButton: {
-    margin: 0,
-  },
-  monthTitle: {
-    color: '#fff',
-    fontSize: 20,
+  headerTitle: {
+    color: '#FFF',
+    fontSize: 24,
     fontWeight: 'bold',
-  },
-  weekdayContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  weekdayCell: {
-    flex: 1,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  weekdayText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#666',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  calendarGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    backgroundColor: '#fff',
-    margin: 8,
-    borderRadius: 8,
-    padding: 8,
-    elevation: 2,
-  },
-  dayButton: {
-    width: '14.28%',
-    aspectRatio: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#eee',
-    margin: 2,
-  },
-  dayWithExams: {
-    backgroundColor: '#FFE0E0',
-    borderColor: '#F44336',
-    borderWidth: 2,
-  },
-  daySelected: {
-    backgroundColor: '#F44336',
-  },
-  dayText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#333',
-  },
-  dayTextSelected: {
-    color: '#fff',
-    fontWeight: 'bold',
-  },
-  emptyDay: {
-    width: '14.28%',
-    aspectRatio: 1,
-    margin: 2,
-  },
-  examIndicator: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#F44336',
-    position: 'absolute',
-    bottom: 4,
-  },
-  loadingContainer: {
-    paddingVertical: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  selectedDateCard: {
-    margin: 16,
-    marginTop: 8,
-    elevation: 3,
-  },
-  selectedDateHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  selectedDateTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    flex: 1,
-  },
-  addButton: {
-    borderColor: '#F44336',
-  },
-  divider: {
-    marginVertical: 12,
-  },
-  examCard: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    marginBottom: 8,
-    elevation: 1,
-    padding: 12,
-  },
-  examCardContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  examInfo: {
-    flex: 1,
-  },
-  examSubject: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-  },
-  examMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  examTime: {
-    marginLeft: 6,
-    fontSize: 12,
-    color: '#666',
-  },
-  examRoom: {
-    marginLeft: 6,
-    fontSize: 12,
-    color: '#666',
-  },
-  noExamsContainer: {
-    alignItems: 'center',
-    paddingVertical: 32,
-  },
-  noExamsText: {
-    marginTop: 12,
-    fontSize: 14,
-    color: '#999',
-    marginBottom: 16,
-  },
-  addExamButton: {
-    marginTop: 8,
-    backgroundColor: '#F44336',
-  },
-  actionButtons: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginBottom: 16,
-  },
-  refreshButton: {
-    backgroundColor: '#F44336',
-  },
-  monthlyExamsCard: {
-    margin: 16,
-    marginTop: 8,
-    elevation: 3,
-  },
-  tableTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 12,
-  },
-  tableHeader: {
-    flexDirection: 'row',
-    backgroundColor: '#F44336',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderRadius: 4,
     marginBottom: 4,
   },
-  tableHeaderCell: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 12,
-    textAlign: 'center',
+  headerSubtitle: {
+    color: '#E3F2FD',
+    fontSize: 14,
+    marginBottom: 16,
   },
-  tableRow: {
+  tabContainer: {
     flexDirection: 'row',
-    paddingVertical: 10,
-    paddingHorizontal: 8,
+    backgroundColor: '#FFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: '#E0E0E0',
+    paddingHorizontal: 8,
   },
-  tableRowAlternate: {
-    backgroundColor: '#f9f9f9',
-  },
-  tableCell: {
-    fontSize: 12,
-    color: '#333',
-    textAlign: 'center',
-  },
-  tableRowContent: {
+  tabButton: {
     flex: 1,
     flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    marginHorizontal: 4,
+    borderBottomWidth: 3,
+    borderBottomColor: 'transparent',
   },
-  deleteButton: {
-    width: 40,
+  tabButtonActive: {
+    borderBottomColor: '#1976D2',
+  },
+  tabLabel: {
+    marginLeft: 6,
+    color: '#666',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  tabLabelActive: {
+    color: '#1976D2',
+    fontWeight: '700',
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 12,
+    paddingTop: 12,
+  },
+  tabContent: {
+    paddingBottom: 20,
+  },
+  sectionHeader: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 12,
+    marginLeft: 4,
+  },
+  loadingContainer: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    color: '#666',
+    fontSize: 14,
+  },
+  listItemCard: {
+    marginBottom: 6,
+    borderRadius: 6,
+    elevation: 1,
+    backgroundColor: '#FFF',
+  },
+  listItemContent: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  listItemMainRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  examNameButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  examNameButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1976D2',
+    marginLeft: 8,
+    flex: 1,
+  },
+  dateContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F5F5F5',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 4,
+    marginLeft: 8,
+  },
+  dateText: {
+    fontSize: 12,
+    color: '#666',
+    fontWeight: '500',
+    marginLeft: 4,
+  },
+  expandedDivider: {
+    marginVertical: 8,
+  },
+  classesListContainer: {
+    paddingVertical: 4,
+  },
+  classItemContainer: {
+    marginVertical: 6,
+  },
+  classButton: {
+    backgroundColor: '#1976D2',
+    borderRadius: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  classButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#FFF',
+  },
+  classExamsContainer: {
+    backgroundColor: '#F9F9F9',
+    borderRadius: 6,
+    marginTop: 6,
+    paddingVertical: 12,
     paddingHorizontal: 8,
+  },
+  classExamItem: {
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    marginVertical: 8,
+    backgroundColor: '#FFF',
+    borderRadius: 6,
+    borderLeftWidth: 4,
+    borderLeftColor: '#1976D2',
+    elevation: 1,
+    overflow: 'hidden',
+  },
+  examDetailContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+  },
+  examDetailLeft: {
+    flex: 0.3,
+    marginRight: 12,
+  },
+  examDetailRight: {
+    flex: 0.7,
+  },
+  examSubjectText: {
+    fontSize: 14,
+    color: '#1976D2',
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  examDateText: {
+    fontSize: 11,
+    color: '#999',
+    fontWeight: '500',
+  },
+  examDetailText: {
+    fontSize: 12,
+    color: '#666',
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  examMarksText: {
+    fontSize: 11,
+    color: '#999',
+    fontWeight: '500',
+  },
+  detailsLineRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    paddingVertical: 8,
+    minHeight: 50,
+  },
+  detailsLineItem: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
+    height: 50,
+  },
+  detailsLineLabel: {
+    fontSize: 11,
+    color: '#999',
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  detailsLineValue: {
+    fontSize: 14,
+    color: '#333',
+    fontWeight: '700',
+  },
+  detailsLineSeparator: {
+    fontSize: 18,
+    color: '#DDD',
+    fontWeight: 'bold',
+    marginHorizontal: 8,
+    height: 50,
+    textAlignVertical: 'center',
+  },
+  resultCard: {
+    marginBottom: 12,
+    borderRadius: 8,
+    elevation: 2,
+  },
+  resultDescription: {
+    color: '#666',
+    fontSize: 14,
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  resultButton: {
+    marginTop: 8,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  emptyText: {
+    marginTop: 12,
+    color: '#999',
+    fontSize: 14,
+  },
+  fab: {
+    backgroundColor: '#1976D2',
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+  },
+  fabAction: {
+    backgroundColor: '#1976D2',
   },
 });
 

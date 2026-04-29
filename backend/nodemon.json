@@ -1,0 +1,15 @@
+{
+  "watch": [".", "config", "middleware", "models", "routes", "utils"],
+  "ignore": ["uploads/", "node_modules/", "*.json", "logs/"],
+  "ext": "js,json",
+  "env": {
+    "NODE_ENV": "development"
+  },
+  "delay": 500,
+  "verbose": true,
+  "events": {
+    "restart": "echo 'App restarted due to file changes'",
+    "crash": "echo 'App has crashed - waiting for file changes to restart'",
+    "quit": "echo 'Process ended'"
+  }
+}

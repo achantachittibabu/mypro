@@ -63,6 +63,7 @@ app.use('/api/files', require('./routes/files'));
 app.use('/api/photos', require('./routes/photos'));
 app.use('/api/menuitems', require('./routes/menuitems'));
 app.use('/api/contactDetails', require('./routes/contactDetails'));
+app.use('/api/awards', require('./routes/awards'));
 
 // Basic health check endpoint
 app.get('/', (req, res) => {

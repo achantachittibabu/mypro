@@ -199,9 +199,9 @@ const HomeScreen = ({ navigation, route }) => {
     },
     {
       id: 4,
-      title: 'Grades',
-      icon: 'chart-line',
-      color: '#252425',
+      title: 'Students',
+      icon: 'school',
+      color: '#1976D2',
       screen: 'Grade',
     },
     {
@@ -255,17 +255,17 @@ const HomeScreen = ({ navigation, route }) => {
     },
     {
       id: 12,
-      title: 'Menu Items',
-      icon: 'file-document',
-      color: '#5E35B1',
-      screen: 'MenuItems',
+      title: 'Teacher',
+      icon: 'briefcase',
+      color: '#1565C0',
+      screen: 'Teacher',
     },
     {
       id: 13,
-      title: 'Settings',
+      title: 'Admin center',
       icon: 'cog',
       color: '#795548',
-      screen: 'Settings',
+      screen: 'AdminCenter',
     },
   ];
 
@@ -343,11 +343,11 @@ const HomeScreen = ({ navigation, route }) => {
       case 'FeePayment':
       case 'Transport':
       case 'Messages':
-      case 'MenuItems':
+      case 'Teacher':
         navigation.navigate(item.screen, { userData: user });
         break;
 
-      case 'Settings':
+      case 'AdminCenter':
         navigation.navigate(item.screen, { userData: user });
         break;
 

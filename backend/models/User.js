@@ -35,6 +35,12 @@ const userSchema = new mongoose.Schema(
       enum: ['student', 'teacher', 'admin', 'parent'],
       default: 'student'
     },
+    approvalstatus: {
+      type: String,
+      required: [false, 'Please provide a user type'],
+      enum: ['Approved', 'Pending'],
+      default: 'Pending'
+    },
     firstName: {
       type: String,
       trim: true
@@ -75,7 +81,7 @@ userSchema.pre('save', async function(next) {
 
     const prefix = prefixes[this.usertype];
     
-    // Get count of users with this userType to generate unique number
+    // Get count of users with this usertype to generate unique number
     const count = await this.constructor.countDocuments({ usertype: this.usertype });
     const number = (count + 1).toString().padStart(9, '0');
     

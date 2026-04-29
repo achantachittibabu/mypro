@@ -35,6 +35,23 @@ const profileSchema = new mongoose.Schema(
       required: [true, 'Please provide date of birth']
     },
 
+    department: {
+      type: String,
+      trim: true
+    },
+    subject: {
+      type: String,
+      trim: true
+    },
+    experience: {
+      type: Number,
+      trim: true
+    },
+    qualification: {
+      type: String,
+      trim: true
+    },
+
     aadharNumber: {
       type: String,
       unique: true,

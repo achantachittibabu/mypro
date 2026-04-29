@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 import {
   View,
@@ -14,8 +14,13 @@ import {
 import { Checkbox } from 'react-native-paper';
 import * as DocumentPicker from 'expo-document-picker';
 import axios from 'axios';
+import App from '../App';
 
-export default function RegisterScreen({ navigation }) {
+export default function AddStudentScreen({ navigation }) {
+  useEffect(() => {
+    console.log('AddStudentScreen mounted successfully');
+  }, []);
+
   const [formData, setFormData] = useState({
     // Account Info
     email: '',
@@ -63,6 +68,9 @@ export default function RegisterScreen({ navigation }) {
     permanentState: '',
     permanentPincode: '',
     permanentPhone: '',
+
+    // Admin Status - Approved by default
+    approvalstatus: 'Approved',
   });
   const [showDropdown, setShowDropdown] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -109,36 +117,21 @@ export default function RegisterScreen({ navigation }) {
     return true;
   };
 
-  const handleRegister = async () => {
-    console.log('=== REGISTRATION STARTED ===');
-    console.log('Form Data:', {
-      email: formData.email,
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      filesCount: uploadedFiles.length,
-    });
-
+  const handleAddStudent = async () => {
     if (!validateForm()) {
-      console.log('Validation failed - aborting');
       return;
     }
 
-    console.log('Validation passed - proceeding with FormData creation');
     setLoading(true);
     try {
-      // Create FormData for multipart/form-data request
       const uploadFormData = new FormData();
-
-      // Add all registration fields
       uploadFormData.append('username', formData.firstName.trim() + '_' + formData.lastName.trim());
       uploadFormData.append('email', formData.email);
       uploadFormData.append('phone', formData.phone);
       uploadFormData.append('password', formData.password);
       uploadFormData.append('confirmPassword', formData.confirmPassword);
       uploadFormData.append('usertype', formData.usertype);
-      uploadFormData.append('isActive', 'false'); // Default to active user
-      
-      // Personal Information
+      uploadFormData.append('isActive', true);
       uploadFormData.append('firstName', formData.firstName.trim());
       uploadFormData.append('lastName', formData.lastName.trim());
       uploadFormData.append('dateOfBirth', formData.dateOfBirth);
@@ -148,15 +141,11 @@ export default function RegisterScreen({ navigation }) {
       uploadFormData.append('grade', formData.grade);
       uploadFormData.append('class', formData.classValue);
       uploadFormData.append('classTeacher', formData.classTeacher);
-
-      // Parent Information
       uploadFormData.append('fatherName', formData.fatherName.trim());
       uploadFormData.append('motherName', formData.motherName.trim());
       uploadFormData.append('fatherAadharNumber', formData.fatherAadharNumber.trim());
       uploadFormData.append('motherAadharNumber', formData.motherAadharNumber.trim());
       uploadFormData.append('fatherOccupation', formData.fatherOccupation.trim());
-
-      // Present Address
       uploadFormData.append('addressType', formData.addressType);
       uploadFormData.append('presentHouseNo', formData.presentHouseNo.trim());
       uploadFormData.append('presentStreet', formData.presentStreet.trim());
@@ -167,9 +156,6 @@ export default function RegisterScreen({ navigation }) {
       uploadFormData.append('presentPincode', formData.presentPincode.trim());
       uploadFormData.append('presentPhone', formData.presentPhone.trim());
       uploadFormData.append('sameAddress', formData.sameAddress);
-
-      // Permanent Address
-      uploadFormData.append('addressType', formData.addressType);
       uploadFormData.append('permanentHouseNo', formData.permanentHouseNo.trim());
       uploadFormData.append('permanentStreet', formData.permanentStreet.trim());
       uploadFormData.append('permanentArea', formData.permanentArea.trim());
@@ -179,74 +165,51 @@ export default function RegisterScreen({ navigation }) {
       uploadFormData.append('permanentPincode', formData.permanentPincode.trim());
       uploadFormData.append('permanentPhone', formData.permanentPhone.trim());
 
-      // Add all uploaded files
-      uploadedFiles.forEach((file, index) => {
-        console.log(`Appending file ${index + 1}:`, file.name);
-        uploadFormData.append('documents', {
+      uploadedFiles.forEach((file) => {
+        const fileData = {
           uri: file.uri,
           type: file.type,
           name: file.name,
-        });
+        };
+        uploadFormData.append('documents', fileData);
       });
 
-      console.log('=== REQUEST DETAILS ===');
-      console.log('URL:', 'http://localhost:5000/api/users/');
-      console.log('Files attached:', uploadedFiles.length);
-      uploadedFiles.forEach((file) => console.log('  -', file.name));
-      
       const response = await axios.post('http://127.0.0.1:5000/api/users/', uploadFormData, {
         headers: {
           'Content-Type': 'multipart/form-data',
-        },
-        onUploadProgress: (progressEvent) => {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          console.log(`Upload Progress: ${percentCompleted}%`);
         },
       });
 
       setLoading(false);
 
       if (response.status == 200 || response.status == 201 || response.statusText == 'Created') {
-        console.log('=== REGISTRATION SUCCESS ===');
-        console.log('Response Status:', response.status);
-        
-        Alert.alert('Success', 'Registration successful! Redirecting to home screen...', [
-          {
-            text: 'OK',
-          },
+        Alert.alert('Success', 'Student added successfully! Status: Approved', [
+          { text: 'OK' },
         ]);
         
-        // Navigate to Index screen after 3 seconds with success message
         setTimeout(() => {
-          navigation.navigate('Index', {
-            message: 'Registration completed successfully!',
+          navigation.navigate('ManageStudents', {
+            message: 'Student added successfully!',
             type: 'success',
           });
         }, 3000);
       }
     } catch (error) {
       setLoading(false);
-      console.error('=== REGISTRATION ERROR ===');
-      console.error('Error Message:', error.message);
-      console.error('Status Code:', error.response?.status);
-      console.error('Error Response:', error.response?.data);
-
-      navigation.navigate('Failure', {
-        message: error.response?.data?.message || 'Registration failed. Please try again.',
-      });
+      Alert.alert('Error', error.response?.data?.message || 'Failed to add student. Please try again.');
     }
   };
 
   const handleClear = () => {
     setFormData({
       // Account Info
-      username: '',
       email: '',
       phone: '',
       password: '',
       confirmPassword: '',
       usertype: 'student',
-      
+      isActive: true,
+
       // Personal Information
       firstName: '',
       lastName: '',
@@ -286,6 +249,9 @@ export default function RegisterScreen({ navigation }) {
       permanentState: '',
       permanentPincode: '',
       permanentPhone: '',
+
+      // Admin Status - Approved by default
+      approved: true,
     });
     setUploadedFiles([]);
   };
@@ -295,21 +261,12 @@ export default function RegisterScreen({ navigation }) {
       const result = await DocumentPicker.getDocumentAsync({
         type: ['image/*'],
       });
-      console.log("File pick result:", JSON.stringify(result));
 
-      if (result.canceled) {
-        console.log('Image selection cancelled by user');
-        return;
-      }
-
-      if (!result.assets || result.assets.length === 0) {
-        Alert.alert('Error', 'No image selected');
+      if (result.canceled || !result.assets || result.assets.length === 0) {
         return;
       }
 
       const asset = result.assets[0];
-      console.log('Selected asset:', asset);
-
       const newFile = {
         id: Date.now() + Math.random(),
         uri: asset.uri,
@@ -320,7 +277,6 @@ export default function RegisterScreen({ navigation }) {
       setUploadedFiles((prev) => [...prev, newFile]);
       Alert.alert('Success', `📷 ${asset.name} added to upload`);
     } catch (err) {
-      console.error('Error picking image:', err);
       Alert.alert('Error', 'Failed to select image: ' + err.message);
     }
   };
@@ -330,21 +286,12 @@ export default function RegisterScreen({ navigation }) {
       const result = await DocumentPicker.getDocumentAsync({
         type: ['image/*', 'application/pdf'],
       });
-      console.log("File pick result:", JSON.stringify(result));
 
-      if (result.canceled) {
-        console.log('File selection cancelled by user');
-        return;
-      }
-
-      if (!result.assets || result.assets.length === 0) {
-        Alert.alert('Error', 'No document selected');
+      if (result.canceled || !result.assets || result.assets.length === 0) {
         return;
       }
 
       const asset = result.assets[0];
-      console.log('Selected asset:', asset);
-
       const newFile = {
         id: Date.now() + Math.random(),
         uri: asset.uri,
@@ -355,7 +302,6 @@ export default function RegisterScreen({ navigation }) {
       setUploadedFiles((prev) => [...prev, newFile]);
       Alert.alert('Success', `📄 ${asset.name} added to upload`);
     } catch (err) {
-      console.error('Error picking file:', err);
       Alert.alert('Error', 'Failed to select document: ' + err.message);
     }
   };
@@ -367,13 +313,13 @@ export default function RegisterScreen({ navigation }) {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.formContainer}>
-        <Text style={styles.title}>Create Account</Text>
-        <Text style={styles.subtitle}>Register for MySchool App</Text>
+        <Text style={styles.title}>Add New Student</Text>
+        <Text style={styles.subtitle}>Register student from Admin Center</Text>
 
         {/* ===== ACCOUNT SECTION ===== */}
         <Text style={styles.sectionTitle}>Account Information</Text>
 
-        {/* Email Input */}
+        {/* First Name Input */}
         <View style={styles.inputContainer}>
           <Text style={styles.label}>First Name</Text>
           <TextInput
@@ -421,46 +367,6 @@ export default function RegisterScreen({ navigation }) {
             keyboardType="phone-pad"
             editable={!loading}
           />
-        </View>
-
-        {/* User Type Dropdown */}
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>User Type</Text>
-          <TouchableOpacity
-            style={styles.dropdown}
-            onPress={() => setShowDropdown(!showDropdown)}
-            disabled={loading}
-          >
-            <Text style={styles.dropdownText}>{formData.usertype}</Text>
-            <Text style={styles.dropdownIcon}>▼</Text>
-          </TouchableOpacity>
-
-          {showDropdown && (
-            <View style={styles.dropdownMenu}>
-              {usertypes.map((type) => (
-                <TouchableOpacity
-                  key={type}
-                  style={[
-                    styles.dropdownItem,
-                    formData.usertype === type && styles.dropdownItemActive,
-                  ]}
-                  onPress={() => {
-                    updateFormData('usertype', type);
-                    setShowDropdown(false);
-                  }}
-                >
-                  <Text
-                    style={[
-                      styles.dropdownItemText,
-                      formData.usertype === type && styles.dropdownItemTextActive,
-                    ]}
-                  >
-                    {type.charAt(0).toUpperCase() + type.slice(1)}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
         </View>
 
         {/* Password Input */}
@@ -538,109 +444,110 @@ export default function RegisterScreen({ navigation }) {
           />
         </View>
 
-        {formData.usertype === 'student' && (
-          <>
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Grade</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter grade"
-                value={formData.grade}
-                onChangeText={(value) => updateFormData('grade', value)}
-                editable={!loading}
-              />
-            </View>
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Grade</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter grade"
+            value={formData.grade}
+            onChangeText={(value) => updateFormData('grade', value)}
+            editable={!loading}
+          />
+        </View>
 
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Class</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter class"
-                value={formData.classValue}
-                onChangeText={(value) => updateFormData('classValue', value)}
-                editable={!loading}
-              />
-            </View>
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Class</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter class"
+            value={formData.classValue}
+            onChangeText={(value) => updateFormData('classValue', value)}
+            editable={!loading}
+          />
+        </View>
 
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Class Teacher</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter class teacher name"
-                value={formData.classTeacher}
-                onChangeText={(value) => updateFormData('classTeacher', value)}
-                editable={!loading}
-              />
-            </View>
-          </>
-        )}
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Class Teacher</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter class teacher name"
+            value={formData.classTeacher}
+            onChangeText={(value) => updateFormData('classTeacher', value)}
+            editable={!loading}
+          />
+        </View>
 
         {/* ===== PARENT INFORMATION SECTION ===== */}
-        {formData.usertype === 'student' && (
-          <>
-            <Text style={styles.sectionTitle}>Parent Information</Text>
+        <Text style={styles.sectionTitle}>Parent Information</Text>
 
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Father Name</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter father name"
-                value={formData.fatherName}
-                onChangeText={(value) => updateFormData('fatherName', value)}
-                editable={!loading}
-              />
-            </View>
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Father Name</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter father name"
+            value={formData.fatherName}
+            onChangeText={(value) => updateFormData('fatherName', value)}
+            editable={!loading}
+          />
+        </View>
 
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Mother Name</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter mother name"
-                value={formData.motherName}
-                onChangeText={(value) => updateFormData('motherName', value)}
-                editable={!loading}
-              />
-            </View>
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Mother Name</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter mother name"
+            value={formData.motherName}
+            onChangeText={(value) => updateFormData('motherName', value)}
+            editable={!loading}
+          />
+        </View>
 
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Father Aadhar Number</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="12-digit Aadhar number"
-                value={formData.fatherAadharNumber}
-                onChangeText={(value) => updateFormData('fatherAadharNumber', value)}
-                keyboardType="numeric"
-                editable={!loading}
-              />
-            </View>
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Father Aadhar Number</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="12-digit Aadhar number"
+            value={formData.fatherAadharNumber}
+            onChangeText={(value) => updateFormData('fatherAadharNumber', value)}
+            keyboardType="numeric"
+            editable={!loading}
+          />
+        </View>
 
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Mother Aadhar Number</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="12-digit Aadhar number"
-                value={formData.motherAadharNumber}
-                onChangeText={(value) => updateFormData('motherAadharNumber', value)}
-                keyboardType="numeric"
-                editable={!loading}
-              />
-            </View>
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Mother Aadhar Number</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="12-digit Aadhar number"
+            value={formData.motherAadharNumber}
+            onChangeText={(value) => updateFormData('motherAadharNumber', value)}
+            keyboardType="numeric"
+            editable={!loading}
+          />
+        </View>
 
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Father Occupation</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter father occupation"
-                value={formData.fatherOccupation}
-                onChangeText={(value) => updateFormData('fatherOccupation', value)}
-                editable={!loading}
-              />
-            </View>
-          </>
-        )}
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Father Occupation</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter father occupation"
+            value={formData.fatherOccupation}
+            onChangeText={(value) => updateFormData('fatherOccupation', value)}
+            editable={!loading}
+          />
+        </View>
 
         {/* ===== PRESENT ADDRESS SECTION ===== */}
         <Text style={styles.sectionTitle}>Present Address</Text>
+
+        <View style={styles.checkboxContainer}>
+          <Checkbox
+            status={formData.sameAddress ? 'checked' : 'unchecked'}
+            onPress={() => updateFormData('sameAddress', !formData.sameAddress)}
+            disabled={loading}
+          />
+          <Text style={styles.checkboxLabel}>Same as Present Address</Text>
+        </View>
 
         <View style={styles.inputContainer}>
           <Text style={styles.label}>House No.</Text>
@@ -733,16 +640,6 @@ export default function RegisterScreen({ navigation }) {
         </View>
 
         {/* ===== PERMANENT ADDRESS SECTION ===== */}
-        
-        <View style={styles.checkboxContainer}>
-          <Checkbox
-            status={formData.sameAddress ? 'checked' : 'unchecked'}
-            onPress={() => updateFormData('sameAddress', !formData.sameAddress)}
-            disabled={loading}
-          />
-          <Text style={styles.checkboxLabel}>Same as Present Address</Text>
-        </View>
-
         {!formData.sameAddress && (
           <>
             <Text style={styles.sectionTitle}>Permanent Address</Text>
@@ -881,17 +778,26 @@ export default function RegisterScreen({ navigation }) {
           </View>
         )}
 
+        {/* Admin Status Section */}
+        <Text style={styles.sectionTitle}>Admin Status</Text>
+        <View style={styles.statusContainer}>
+          <View style={[styles.statusBadge, styles.approvedBadge]}>
+            <Text style={styles.statusText}>✓ Approved</Text>
+          </View>
+          <Text style={styles.statusNote}>Student status is automatically set to Approved</Text>
+        </View>
+
         {/* Buttons */}
         <View style={styles.buttonContainer}>
           <TouchableOpacity
-            style={[styles.button, styles.registerButton, loading && styles.buttonDisabled]}
-            onPress={handleRegister}
+            style={[styles.button, styles.addButton, loading && styles.buttonDisabled]}
+            onPress={handleAddStudent}
             disabled={loading}
           >
             {loading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.buttonText}>Register</Text>
+              <Text style={styles.buttonText}>Add Student</Text>
             )}
           </TouchableOpacity>
 
@@ -904,14 +810,14 @@ export default function RegisterScreen({ navigation }) {
           </TouchableOpacity>
         </View>
 
-        {/* Back to Login */}
+        {/* Back to Manage Students */}
         <TouchableOpacity
           style={styles.loginLink}
-          onPress={() => navigation.navigate('Login')}
+          onPress={() => navigation.goBack()}
           disabled={loading}
         >
           <Text style={styles.loginLinkText}>
-            Already have an account? Login here
+            Back to Manage Students
           </Text>
         </TouchableOpacity>
       </View>
@@ -977,13 +883,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     backgroundColor: '#fafafa',
   },
-  pickerContainer: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    backgroundColor: '#fafafa',
-    overflow: 'hidden',
-  },
   dropdown: {
     borderWidth: 1,
     borderColor: '#ddd',
@@ -1041,7 +940,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
   },
-  registerButton: {
+  addButton: {
     backgroundColor: '#34C759',
   },
   clearButton: {
@@ -1118,13 +1017,6 @@ const styles = StyleSheet.create({
     color: '#FF3B30',
     fontWeight: '600',
   },
-  selectedFileText: {
-    fontSize: 12,
-    color: '#34C759',
-    marginBottom: 12,
-    marginLeft: 8,
-    fontStyle: 'italic',
-  },
   buttonText: {
     color: '#fff',
     fontSize: 16,
@@ -1149,5 +1041,32 @@ const styles = StyleSheet.create({
   loginLinkText: {
     color: '#007AFF',
     fontSize: 14,
+  },
+  statusContainer: {
+    backgroundColor: '#f0f9ff',
+    borderRadius: 8,
+    padding: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: '#34C759',
+    marginBottom: 15,
+  },
+  statusBadge: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    marginBottom: 8,
+  },
+  approvedBadge: {
+    backgroundColor: '#34C759',
+  },
+  statusText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  statusNote: {
+    fontSize: 12,
+    color: '#666',
+    fontStyle: 'italic',
   },
 });

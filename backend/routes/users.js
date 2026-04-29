@@ -60,13 +60,61 @@ const upload = multer({
 
 // GET all users
 router.get('/', async (req, res) => {
+  const { usertype } = req.query;
+  logger.info('GET /users request received', { usertype });
   try {
-    const users = await User.find().select('-password');
-    logger.info('Retrieved all users', { count: users.length });
+    const users = await User.find({ usertype: usertype }).select('-password');
+    
+    let enrichedUsers = users;
+    logger.info('Fetching users', { usertype });
+    
+    // If usertype is student, add profile and parent data
+    if (usertype === 'student') {
+      enrichedUsers = await Promise.all(users.map(async (user) => {
+        const userObj = user.toObject ? user.toObject() : user;
+        
+        // Fetch profile data related to this user
+        const profile = await Profile.findOne({ userUnId: user._id.toString() });
+        logger.info('Retrieved user profile', { profile });    
+        
+        // Fetch parent data related to this user
+        const parent = await Parent.findOne({ userUnId: user._id.toString() });
+        logger.info('Retrieved user parent', { parent });
+        
+        return {
+          ...userObj,
+          profile: profile || null,
+          parent: parent || null
+        };
+      }));
+    }
+
+    if (usertype === 'teacher') {
+      enrichedUsers = await Promise.all(users.map(async (user) => {
+        const userObj = user.toObject ? user.toObject() : user;
+        
+        // Fetch profile data related to this user
+        const profile = await Profile.findOne({ userUnId: user._id.toString() });
+        logger.info('Retrieved user profile', { profile });    
+        
+        // Fetch parent data related to this user
+        const parent = await Parent.findOne({ userUnId: user._id.toString() });
+        logger.info('Retrieved user parent', { parent });
+        
+
+        return {
+          ...userObj,
+          profile: profile || null,
+          parent: parent || null
+        };
+      }));
+    }
+    
+    logger.info('Retrieved all users', { count: enrichedUsers.length, usertype });
     res.json({
       success: true,
-      data: users,
-      count: users.length
+      data: enrichedUsers,
+      count: enrichedUsers.length
     });
   } catch (error) {
     logger.error('Error retrieving users', error.message);
@@ -88,10 +136,25 @@ router.get('/:id', async (req, res) => {
         message: 'User not found'
       });
     }
+    
+    let userData = user.toObject ? user.toObject() : user;
+    
+    // If user is a student, add profile and parent data
+    if (user.userType === 'student' || user.usertype === 'student') {
+      const profile = await Profile.findOne({ userUnId: user._id.toString() });
+      const parent = await Parent.findOne({ userUnId: user._id.toString() });
+      
+      userData = {
+        ...userData,
+        profile: profile || null,
+        parent: parent || null
+      };
+    }
+    
     logger.info('Retrieved user', { userId: req.params.id });
     res.json({
       success: true,
-      data: user
+      data: userData
     });
   } catch (error) {
     logger.error('Error retrieving user', error.message);
@@ -136,7 +199,8 @@ router.post('/', upload.fields([
       phone,
       password,
       confirmPassword,
-      userType,
+      usertype,
+      isActive,
       // Personal Information
       firstName,
       lastName,
@@ -171,21 +235,26 @@ router.post('/', upload.fields([
       permanentDistrict,
       permanentState,
       permanentPincode,
-      permanentPhone
+      permanentPhone,
+      //teacher data
+      department,
+      subject,
+      experience,
+      qualification
     } = req.body;
 
     // Validate required fields
-    if (!username || !email || !password || !confirmPassword || !userType) {
+    if (!username || !email || !password || !confirmPassword || !usertype) {
       logger.warn('User creation validation failed - missing required fields', {
         hasUsername: !!username,
         hasEmail: !!email,
         hasPassword: !!password,
         hasConfirmPassword: !!confirmPassword,
-        hasUserType: !!userType
+        hasUserType: !!usertype
       });
       return res.status(400).json({
         success: false,
-        message: 'Missing required fields: username, email, password, confirmPassword, userType'
+        message: 'Missing required fields: username, email, password, confirmPassword, usertype'
       });
     }
 
@@ -214,8 +283,8 @@ router.post('/', upload.fields([
       email: email.toLowerCase(),
       phone,
       password,
-      userType,
-      isActive: true,
+      usertype,
+      isActive: isActive,
       createdAt: new Date()
     });
 
@@ -225,7 +294,7 @@ router.post('/', upload.fields([
       userid: savedUser._id,
       username: savedUser.username,
       email: savedUser.email,
-      userType: savedUser.userType
+      usertype: savedUser.usertype
     });
 
     // Create Profile
@@ -240,6 +309,10 @@ router.post('/', upload.fields([
       grade: grade || '',
       class: classValue || '',
       classTeacher: classTeacher || '',
+      department: department || '',
+      subject: subject || '',
+      experience: experience || 0,
+      qualification: qualification || '',
       creationdate: new Date(),
       lastupdateddate: new Date(),
       lastupdatedby: username
@@ -309,7 +382,7 @@ router.post('/', upload.fields([
     }
 
     // Create Parent info if student
-    if (userType === 'student') {
+    if (usertype === 'student') {
       const parent = new Parent({
         userUnId: savedUser._id.toString(),
         fatherName: fatherName || '',
@@ -452,7 +525,7 @@ router.post('/', upload.fields([
           _id: savedUser._id,
           username: savedUser.username,
           email: savedUser.email,
-          userType: savedUser.userType
+          usertype: savedUser.usertype
         },
         createdDocuments
       }
@@ -570,6 +643,52 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+// PATCH - Update user status (partial update)
+router.patch('/:id', async (req, res) => {
+  try {
+    const { isActive } = req.body;
+    
+    if (isActive === undefined) {
+      logger.warn('PATCH request missing isActive field', { userId: req.params.id });
+      return res.status(400).json({
+        success: false,
+        message: 'isActive field is required'
+      });
+    }
+
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      logger.warn('User not found for status update', { userId: req.params.id });
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Update only the isActive field
+    user.isActive = isActive;
+    await user.save();
+    
+    logger.info('User status updated successfully', { 
+      userId: req.params.id, 
+      username: user.username,
+      isActive: user.isActive 
+    });
+
+    res.json({
+      success: true,
+      message: `User ${isActive ? 'enabled' : 'disabled'} successfully`,
+      data: user
+    });
+  } catch (error) {
+    logger.error('Error updating user status', error.message);
+    res.status(400).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
 // LOGIN endpoint
 router.post('/login', async (req, res) => {
   try {
@@ -583,7 +702,7 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    const user = await User.findOne({ username, usertype }).select('+password');
+    const user = await User.findOne({ username, usertype: usertype }).select('+password');
     if (!user) {
       logger.warn('Login failed: User not found', { username, usertype });
       return res.status(401).json({
@@ -666,6 +785,7 @@ router.post('/login', async (req, res) => {
       username: user.username,
       email: user.email,
       firstName: user.firstName,
+      usertype: user.usertype,
       profilePicture: profilePicture,
       profilePictureBase64: profilePictureBase64,
       profilePictureType: profilePictureType

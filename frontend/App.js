@@ -21,6 +21,8 @@ import LeaveHistoryScreen from './screens/LeaveHistoryScreen';
 import HolidayCalendarScreen from './screens/HolidayCalendarScreen';
 import GradeScreen from './screens/GradeScreen';
 import GradeEditScreen from './screens/GradeEditScreen';
+import TeacherPage from './screens/TeacherPage';
+import TeacherDetailScreen from './screens/TeacherDetailScreen';
 import TimeTableScreen from './screens/TimeTableScreen';
 import CreateTimeTableScreen from './screens/CreateTimeTableScreen';
 import EditTimeTableScreen from './screens/EditTimeTableScreen';
@@ -50,10 +52,30 @@ import TransportScreen from './screens/TransportScreen';
 import TransportDetailScreen from './screens/TransportDetailScreen';
 import MessagesScreen from './screens/MessagesScreen';
 import MessageDetailScreen from './screens/MessageDetailScreen';
-import SettingsScreen from './screens/SettingsScreen';
+import AdminCenterScreen from './screens/AdminCenterScreen';
+import ManageStudents from './screens/ManageStudents';
+import AddStudentScreen from './screens/AddStudentScreen';
+import AddTeacherScreen from './screens/AddTeacherScreen';
+import AddAdminScreen from './screens/AddAdminScreen';
 import ProfileScreen from './screens/ProfileScreen';
 import ProfileDetailsScreen from './screens/ProfileDetailsScreen';
 import MenuItemsScreen from './screens/MenuItemsScreen';
+
+// New Admin Screens
+import ManageTeachers from './screens/ManageTeachers';
+import ManageAdmins from './screens/ManageAdmins';
+import RegisterStudentFees from './screens/RegisterStudentFees';
+import CreateAward from './screens/CreateAward';
+import AwardsList from './screens/AwardsList';
+import AddHomepagePost from './screens/AddHomepagePost';
+import ShareVideo from './screens/ShareVideo';
+import ApproveAttendance from './screens/ApproveAttendance';
+import AddHoliday from './screens/AddHoliday';
+import PhotoApprovals from './screens/PhotoApprovals';
+import ResourceAccess from './screens/ResourceAccess';
+import EnableResults from './screens/EnableResults';
+import ResetPassword from './screens/ResetPassword';
+import NoDueForm from './screens/NoDueForm';
 
 const Stack = createNativeStackNavigator();
 
@@ -447,12 +469,41 @@ export default function App() {
         }}
         />
         <Stack.Screen 
-          name="Settings" 
-          component={SettingsScreen}
-          //options={{ title: 'Settings' }}
+          name="AdminCenter" 
+          component={AdminCenterScreen}
+          //options={{ title: 'AdminCenter' }}
           screenOptions={{
           headerShown: false,
         }}
+        />
+        <Stack.Screen 
+          name="ManageStudents" 
+          component={ManageStudents}
+          //options={{ title: 'Manage Students' }}
+          screenOptions={{
+          headerShown: false,
+        }}
+        />
+        <Stack.Screen 
+          name="AddStudent" 
+          component={AddStudentScreen}
+          screenOptions={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen 
+          name="AddTeacher" 
+          component={AddTeacherScreen}
+          screenOptions={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen 
+          name="AddAdmin" 
+          component={AddAdminScreen}
+          screenOptions={{
+            headerShown: false,
+          }}
         />
         <Stack.Screen 
           name="Profile" 
@@ -474,6 +525,119 @@ export default function App() {
           name="MenuItems" 
           component={MenuItemsScreen}
           //options={{ title: 'Menu Items' }}
+          screenOptions={{
+          headerShown: false,
+        }}
+        />
+        {/* New Admin Screens */}
+        <Stack.Screen 
+          name="ManageTeachers" 
+          component={ManageTeachers}
+          screenOptions={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen 
+          name="ManageAdmins" 
+          component={ManageAdmins}
+          screenOptions={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen 
+          name="RegisterStudentFees" 
+          component={RegisterStudentFees}
+          screenOptions={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen 
+          name="CreateAward" 
+          component={CreateAward}
+          screenOptions={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen 
+          name="AwardsList" 
+          component={AwardsList}
+          screenOptions={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen 
+          name="AddHomepagePost" 
+          component={AddHomepagePost}
+          screenOptions={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen 
+          name="ShareVideo" 
+          component={ShareVideo}
+          screenOptions={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen 
+          name="ApproveAttendance" 
+          component={ApproveAttendance}
+          screenOptions={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen 
+          name="AddHoliday" 
+          component={AddHoliday}
+          screenOptions={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen 
+          name="PhotoApprovals" 
+          component={PhotoApprovals}
+          screenOptions={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen 
+          name="ResourceAccess" 
+          component={ResourceAccess}
+          screenOptions={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen 
+          name="EnableResults" 
+          component={EnableResults}
+          screenOptions={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen 
+          name="ResetPassword" 
+          component={ResetPassword}
+          screenOptions={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen 
+          name="NoDueForm" 
+          component={NoDueForm}
+          screenOptions={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen 
+          name="Teacher" 
+          component={TeacherPage}
+          screenOptions={{
+          headerShown: false,
+        }}
+        />
+        <Stack.Screen 
+          name="TeacherDetail" 
+          component={TeacherDetailScreen}
           screenOptions={{
           headerShown: false,
         }}

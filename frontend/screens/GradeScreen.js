@@ -6,6 +6,11 @@ import {
   Alert,
   FlatList,
   TouchableOpacity,
+  RefreshControl,
+  Dimensions,
+  Modal,
+  TextInput as RNTextInput,
+  Image,
 } from 'react-native';
 import {
   Card,
@@ -15,144 +20,439 @@ import {
   Divider,
   ActivityIndicator,
   Menu,
+  Chip,
+  Avatar,
+  TextInput,
+  SegmentedButtons,
 } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import axios from 'axios';
 
 const GradeScreen = ({ navigation, route }) => {
   const [user, setUser] = useState(null);
-  const [selectedUserType, setSelectedUserType] = useState('student');
   const [selectedGrade, setSelectedGrade] = useState('9');
-  const [showUserTypeMenu, setShowUserTypeMenu] = useState(false);
   const [showGradeMenu, setShowGradeMenu] = useState(false);
-  const [gradesData, setGradesData] = useState([]);
+  const [studentsList, setStudentsList] = useState([]);
+  const [selectedStudent, setSelectedStudent] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  
+  // Awards state
+  const [currentView, setCurrentView] = useState('students'); // 'students' or 'awards'
+  const [awardsList, setAwardsList] = useState([]);
+  const [groupedAwards, setGroupedAwards] = useState({});
+  const [showAddAwardModal, setShowAddAwardModal] = useState(false);
+  const [awardLoading, setAwardLoading] = useState(false);
+  const [carouselScrollPositions, setCarouselScrollPositions] = useState({});
+  
+  // Award form fields
+  const [formData, setFormData] = useState({
+    awardName: '',
+    studentName: '',
+    studentId: '',
+    grade: '',
+    month: '',
+    position: '1st',
+    nominatedBy: '',
+  });
 
-  // Grade options for each user type
-  const gradesByUserType = {
-    student: ['9', '10', '11', '12'],
-    teacher: ['9', '10', '11', '12'],
-    admin: ['All Grades'],
-  };
+  // Grade options (for students, they see their grade and classmates)
+  const gradeOptions = ['9', '10', '11', '12'];
+  const positionOptions = ['1st', '2nd', '3rd'];
 
   useEffect(() => {
     // Get user data from navigation params
-    console.log('useEffect: Route params received:', route.params);
     if (route.params?.userData) {
-      console.log('useEffect: Setting user data:', route.params.userData);
       setUser(route.params.userData);
-      
-      // Set initial user type based on logged-in user's type
-      if (route.params.userData.userType === 'student') {
-        setSelectedUserType('student');
-        setSelectedGrade('9');
-      } else if (route.params.userData.userType === 'teacher') {
-        setSelectedUserType('teacher');
-        setSelectedGrade('9');
-      } else if (route.params.userData.userType === 'admin') {
-        setSelectedUserType('admin');
-        setSelectedGrade('All Grades');
-      }
-
-      // Use grades data if available
-      if (route.params?.gradesData) {
-        console.log('useEffect: Setting grades data:', route.params.gradesData);
-        if (Array.isArray(route.params.gradesData)) {
-          setGradesData(route.params.gradesData);
-        }
+      // Set grade based on user's grade if available
+      if (route.params.userData.grade) {
+        setSelectedGrade(route.params.userData.grade);
       }
     }
   }, [route.params]);
 
-  // Check if user is authorized to view filters (teacher or admin)
-  const canViewFilters = user && (user.userType === 'teacher' || user.userType === 'admin');
-  
-  // For students, they can only view their own record
-  const isStudent = user && user.userType === 'student';
-
-  const handleUserTypeSelect = (userType) => {
-    console.log('handleUserTypeSelect called with:', userType);
-    setSelectedUserType(userType);
-    setShowUserTypeMenu(false);
-    // Reset grade when user type changes
-    const grades = gradesByUserType[userType];
-    setSelectedGrade(grades[0]);
-  };
-
-  const fetchGrades = async () => {
-    console.log('fetchGrades called with userType:', selectedUserType, 'grade:', selectedGrade);
+  // Fetch students in the same grade/class
+  const fetchStudents = async () => {
     setLoading(true);
     try {
-      console.log('fetchGrades: Making API request to localhost:5000/api/grades');
-      const response = await axios.get('http://localhost:5000/api/grades', {
+      const grade = user?.grade || selectedGrade;
+      const response = await axios.get('http://localhost:5000/api/users', {
         params: {
-          userType: selectedUserType
+          userType: 'student',
+          grade: grade,
         },
       });
 
       if (response.status === 200) {
-        console.log('fetchGrades: API response received:', response.data);
-        // Extract the data array from the response object
-        const gradesArray = response.data.data || [];
-        console.log('fetchGrades: Extracted grades array:', gradesArray);
-        setGradesData(gradesArray);
-      } else {
-        console.error('fetchGrades: Failed with status:', response.status);
-        Alert.alert('Error', 'Failed to fetch grades');
+        const studentsData = response.data.data || [];
+        setStudentsList(studentsData);
       }
     } catch (error) {
-      console.error('fetchGrades: Error fetching grades:', error);
+      console.error('Error fetching students:', error);
       // Mock data for demonstration
-      console.log('fetchGrades: Using mock data');
-      setGradesData([
+      setStudentsList([
         {
-          gradeid: '1001',
-          studentname: 'John Doe',
-          studentid: 'S001',
-          subject: 'Mathematics',
-          marks: 85,
-          grade: '9',
-          semester: 'Spring 2024',
+          userid: 'S001',
+          firstname: 'John',
+          lastname: 'Doe',
+          grade: selectedGrade,
+          email: 'john@school.com',
+          contact: '9876543210',
+          attendance: '92%',
+          average_grade: 'A',
         },
         {
-          gradeid: '1002',
-          studentname: 'Jane Smith',
-          studentid: 'S002',
-          subject: 'English',
-          marks: 92,
-          grade: '9',
-          semester: 'Spring 2024',
+          userid: 'S002',
+          firstname: 'Jane',
+          lastname: 'Smith',
+          grade: selectedGrade,
+          email: 'jane@school.com',
+          contact: '9876543211',
+          attendance: '95%',
+          average_grade: 'A+',
         },
         {
-          gradeid: '1003',
-          studentname: 'Alex Johnson',
-          studentid: 'S003',
-          subject: 'Science',
-          marks: 78,
-          grade: '9',
-          semester: 'Spring 2024',
+          userid: 'S003',
+          firstname: 'Alex',
+          lastname: 'Johnson',
+          grade: selectedGrade,
+          email: 'alex@school.com',
+          contact: '9876543212',
+          attendance: '88%',
+          average_grade: 'B+',
         },
         {
-          gradeid: '1004',
-          studentname: 'Sarah Williams',
-          studentid: 'S004',
-          subject: 'Social Studies',
-          marks: 88,
-          grade: '9',
-          semester: 'Spring 2024',
+          userid: 'S004',
+          firstname: 'Sarah',
+          lastname: 'Williams',
+          grade: selectedGrade,
+          email: 'sarah@school.com',
+          contact: '9876543213',
+          attendance: '96%',
+          average_grade: 'A',
         },
       ]);
     }
     setLoading(false);
   };
 
-  useEffect(() => {
-    console.log('useEffect (fetchGrades trigger): canViewFilters:', canViewFilters, 'gradesData.length:', gradesData?.length);
-    if (canViewFilters && gradesData.length === 0) {
-      console.log('useEffect: Calling fetchGrades');
-      fetchGrades();
+  // Fetch awards from all grades
+  const fetchAwards = async () => {
+    setAwardLoading(true);
+    try {
+      const response = await axios.get('http://localhost:5000/api/awards');
+      
+      if (response.status === 200) {
+        const awardsData = response.data.data || [];
+        setAwardsList(awardsData);
+        groupAwardsByType(awardsData);
+      }
+    } catch (error) {
+      console.error('Error fetching awards:', error);
+      // Mock data for demonstration with photos
+      const mockAwards = [
+        {
+          awardid: 'A001',
+          awardname: 'Best Student Award',
+          awardtype: 'Academic Excellence',
+          studentid: 'S001',
+          studentname: 'John Doe',
+          grade: '9',
+          month: 'March',
+          position: '1st',
+          nominatedby: 'Mr. Smith',
+          photo: 'https://via.placeholder.com/300x400/1976D2/FFFFFF?text=John+Doe',
+        },
+        {
+          awardid: 'A002',
+          awardname: 'Academic Excellence',
+          awardtype: 'Academic Excellence',
+          studentid: 'S002',
+          studentname: 'Jane Smith',
+          grade: '10',
+          month: 'February',
+          position: '1st',
+          nominatedby: 'Ms. Johnson',
+          photo: 'https://via.placeholder.com/300x400/FF69B4/FFFFFF?text=Jane+Smith',
+        },
+        {
+          awardid: 'A003',
+          awardname: 'Sports Champion',
+          awardtype: 'Sports',
+          studentid: 'S003',
+          studentname: 'Alex Johnson',
+          grade: '9',
+          month: 'April',
+          position: '2nd',
+          nominatedby: 'Coach Williams',
+          photo: 'https://via.placeholder.com/300x400/4CAF50/FFFFFF?text=Alex+J',
+        },
+        {
+          awardid: 'A004',
+          awardname: 'Arts & Culture Award',
+          awardtype: 'Arts & Culture',
+          studentid: 'S004',
+          studentname: 'Sarah Williams',
+          grade: '11',
+          month: 'January',
+          position: '1st',
+          nominatedby: 'Ms. Brown',
+          photo: 'https://via.placeholder.com/300x400/9C27B0/FFFFFF?text=Sarah+W',
+        },
+        {
+          awardid: 'A005',
+          awardname: 'Leadership Award',
+          awardtype: 'Sports',
+          studentid: 'S001',
+          studentname: 'John Doe',
+          grade: '9',
+          month: 'April',
+          position: '3rd',
+          nominatedby: 'Mr. Davis',
+          photo: 'https://via.placeholder.com/300x400/1976D2/FFFFFF?text=John+Doe',
+        },
+        {
+          awardid: 'A006',
+          awardname: 'Science Innovation',
+          awardtype: 'Academic Excellence',
+          studentid: 'S005',
+          studentname: 'Emily Brown',
+          grade: '12',
+          month: 'March',
+          position: '1st',
+          nominatedby: 'Dr. Smith',
+          photo: 'https://via.placeholder.com/300x400/FF5722/FFFFFF?text=Emily+B',
+        },
+        {
+          awardid: 'A007',
+          awardname: 'Debate Champion',
+          awardtype: 'Arts & Culture',
+          studentid: 'S006',
+          studentname: 'Michael Chen',
+          grade: '10',
+          month: 'February',
+          position: '2nd',
+          nominatedby: 'Ms. Lee',
+          photo: 'https://via.placeholder.com/300x400/00BCD4/FFFFFF?text=Michael+C',
+        },
+        {
+          awardid: 'A008',
+          awardname: 'Runner-up Sports',
+          awardtype: 'Sports',
+          studentid: 'S007',
+          studentname: 'David Kumar',
+          grade: '9',
+          month: 'April',
+          position: '3rd',
+          nominatedby: 'Coach Martin',
+          photo: 'https://via.placeholder.com/300x400/8BC34A/FFFFFF?text=David+K',
+        },
+      ];
+      setAwardsList(mockAwards);
+      groupAwardsByType(mockAwards);
     }
-  }, [selectedUserType, selectedGrade, canViewFilters]);
+    setAwardLoading(false);
+  };
+
+  // Group awards by type
+  const groupAwardsByType = (awards) => {
+    const grouped = {};
+    awards.forEach((award) => {
+      const type = award.awardtype || 'Other';
+      if (!grouped[type]) {
+        grouped[type] = [];
+      }
+      grouped[type].push(award);
+    });
+    setGroupedAwards(grouped);
+  };
+
+  useEffect(() => {
+    if (selectedGrade) {
+      fetchStudents();
+    }
+  }, [selectedGrade]);
+
+  useEffect(() => {
+    if (currentView === 'awards') {
+      fetchAwards();
+    }
+  }, [currentView]);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    if (currentView === 'students') {
+      await fetchStudents();
+    } else {
+      await fetchAwards();
+    }
+    setRefreshing(false);
+  };
+
+  // Award form handlers
+  const handleAddAward = () => {
+    setFormData({
+      awardName: '',
+      studentName: '',
+      studentId: '',
+      grade: '',
+      month: '',
+      position: '1st',
+      nominatedBy: '',
+    });
+    setShowAddAwardModal(true);
+  };
+
+  const handleResetForm = () => {
+    setFormData({
+      awardName: '',
+      studentName: '',
+      studentId: '',
+      grade: '',
+      month: '',
+      position: '1st',
+      nominatedBy: '',
+    });
+  };
+
+  const handleSubmitAward = async () => {
+    if (
+      !formData.awardName ||
+      !formData.studentName ||
+      !formData.grade ||
+      !formData.month ||
+      !formData.nominatedBy
+    ) {
+      Alert.alert('Error', 'Please fill all required fields');
+      return;
+    }
+
+    try {
+      const newAward = {
+        awardname: formData.awardName,
+        studentname: formData.studentName,
+        studentid: formData.studentId,
+        grade: formData.grade,
+        month: formData.month,
+        position: formData.position,
+        nominatedby: formData.nominatedBy,
+      };
+
+      // Simulate API call
+      const response = await axios.post('http://localhost:5000/api/awards', newAward);
+      
+      if (response.status === 201) {
+        Alert.alert('Success', 'Award added successfully');
+        setShowAddAwardModal(false);
+        handleResetForm();
+        fetchAwards();
+      }
+    } catch (error) {
+      console.error('Error submitting award:', error);
+      // Mock success
+      setAwardsList([...awardsList, {
+        awardid: `A${Date.now()}`,
+        ...formData,
+      }]);
+      Alert.alert('Success', 'Award added successfully (Demo Mode)');
+      setShowAddAwardModal(false);
+      handleResetForm();
+    }
+  };
+
+  const handleCancelAward = () => {
+    setShowAddAwardModal(false);
+    handleResetForm();
+  };
+
+  // Render horizontal photo carousel
+  const renderPhotoCarousel = (awardType) => {
+    const awards = groupedAwards[awardType] || [];
+    
+    return (
+      <View style={styles.carouselContainer}>
+        <FlatList
+          data={awards}
+          renderItem={({ item, index }) => (
+            <TouchableOpacity
+              style={styles.photoItemContainer}
+              activeOpacity={0.9}
+            >
+              <View style={styles.photoFrame}>
+                <Image
+                  source={{ uri: item.photo }}
+                  style={styles.studentPhoto}
+                  resizeMode="cover"
+                />
+                <View style={styles.photoOverlay}>
+                  <Text style={styles.photoStudentName}>{item.studentname}</Text>
+                  <Text style={styles.photoAwardName}>{item.awardname}</Text>
+                  <View
+                    style={[
+                      styles.photoPositionBadge,
+                      item.position === '1st' && styles.photoPositionGold,
+                      item.position === '2nd' && styles.photoPositionSilver,
+                      item.position === '3rd' && styles.photoPositionBronze,
+                    ]}
+                  >
+                    <Text style={styles.photoPositionText}>{item.position}</Text>
+                  </View>
+                </View>
+              </View>
+            </TouchableOpacity>
+          )}
+          keyExtractor={(item) => item.awardid}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          snapToInterval={styles.photoItemContainer.width || 280}
+          decelerationRate="fast"
+          contentContainerStyle={styles.carouselContent}
+          scrollEventThrottle={16}
+        />
+      </View>
+    );
+  };
+
+
+  const handleSelectStudent = (student) => {
+    setSelectedStudent(student);
+  };
+
+  const handleViewAttendance = () => {
+    if (!selectedStudent) return;
+    navigation.navigate('Attendance', {
+      userData: user,
+      studentId: selectedStudent.userid,
+      studentName: `${selectedStudent.firstname} ${selectedStudent.lastname}`,
+    });
+  };
+
+  const handleViewExams = () => {
+    if (!selectedStudent) return;
+    navigation.navigate('Exams', {
+      userData: user,
+      studentId: selectedStudent.userid,
+      studentName: `${selectedStudent.firstname} ${selectedStudent.lastname}`,
+    });
+  };
+
+  const handleViewFeeDetails = () => {
+    if (!selectedStudent) return;
+    navigation.navigate('FeePayment', {
+      userData: user,
+      studentId: selectedStudent.userid,
+      studentName: `${selectedStudent.firstname} ${selectedStudent.lastname}`,
+    });
+  };
+
+  const handleViewProfile = () => {
+    if (!selectedStudent) return;
+    navigation.navigate('ProfileDetails', {
+      userData: user,
+      studentId: selectedStudent.userid,
+      studentName: `${selectedStudent.firstname} ${selectedStudent.lastname}`,
+    });
+  };
 
   const handleViewGrade = (gradeItem) => {
     console.log('handleViewGrade called with:', gradeItem);
@@ -160,6 +460,91 @@ const GradeScreen = ({ navigation, route }) => {
       userData: user,
       gradeData: gradeItem,
     });
+  };
+
+
+  // Render awards grouped by type
+  const renderAwardsGrouped = () => {
+    const awardTypes = Object.keys(groupedAwards).sort();
+
+    return (
+      <View>
+        {awardTypes.map((awardType, index) => (
+          <View key={`${awardType}-${index}`} style={styles.awardTypeSection}>
+            <View style={styles.awardTypeHeader}>
+              <Icon
+                name="trophy"
+                size={24}
+                color="#FFB300"
+                style={styles.awardTypeIcon}
+              />
+              <Text style={styles.awardTypeTitle}>{awardType}</Text>
+              <Chip
+                label={`${groupedAwards[awardType].length}`}
+                style={styles.awardCountChip}
+                textStyle={styles.awardCountChipText}
+              />
+            </View>
+
+            <Divider style={styles.awardTypeDivider} />
+
+            {renderPhotoCarousel(awardType)}
+          </View>
+        ))}
+      </View>
+    );
+  };
+
+  const renderStudentCard = ({ item }) => {
+    const isSelected = selectedStudent?.userid === item.userid;
+    const studentName = `${item.firstname} ${item.lastname}`;
+    
+    return (
+      <TouchableOpacity onPress={() => handleSelectStudent(item)}>
+        <Card
+          style={[
+            styles.studentCard,
+            isSelected && styles.studentCardSelected,
+          ]}
+        >
+          <Card.Content>
+            <View style={styles.studentCardHeader}>
+              <View style={styles.studentInfo}>
+                <Avatar.Text
+                  size={40}
+                  label={`${item.firstname?.[0]}${item.lastname?.[0]}`}
+                  style={styles.avatar}
+                />
+                <View style={styles.studentDetails}>
+                  <Text style={styles.studentName}>{studentName}</Text>
+                  <Text style={styles.studentId}>ID: {item.userid}</Text>
+                </View>
+              </View>
+              <Icon
+                name={isSelected ? 'check-circle' : 'circle-outline'}
+                size={24}
+                color={isSelected ? '#4CAF50' : '#ccc'}
+              />
+            </View>
+            
+            <View style={styles.studentStats}>
+              <View style={styles.statItem}>
+                <Text style={styles.statLabel}>Attendance</Text>
+                <Text style={styles.statValue}>{item.attendance || 'N/A'}</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text style={styles.statLabel}>Grade</Text>
+                <Text style={styles.statValue}>{item.average_grade || 'N/A'}</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text style={styles.statLabel}>Contact</Text>
+                <Text style={styles.statValue} numberOfLines={1}>{item.contact || 'N/A'}</Text>
+              </View>
+            </View>
+          </Card.Content>
+        </Card>
+      </TouchableOpacity>
+    );
   };
 
   const renderGradeRow = ({ item }) => {
@@ -188,147 +573,439 @@ const GradeScreen = ({ navigation, route }) => {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <Card style={styles.card}>
-        <Card.Content>
-          {isStudent ? (
-            <Title>My Grades</Title>
-          ) : (
-            <Title>Grade Management</Title>
-          )}
-          
-          {/* Show filters only for teachers and admins */}
-          {canViewFilters && (
-            <View style={styles.filtersContainer}>
-              {/* User Type Dropdown */}
-              <View style={styles.dropdownContainer}>
-                <Text style={styles.label}>User Type</Text>
-                <Menu
-                  visible={showUserTypeMenu}
-                  onDismiss={() => setShowUserTypeMenu(false)}
-                  anchor={
-                    <TouchableOpacity
-                      onPress={() => setShowUserTypeMenu(true)}
-                      style={styles.dropdownButton}
-                    >
-                      <Text style={styles.dropdownText}>{selectedUserType}</Text>
-                      <Icon name="chevron-down" size={20} color="#666" />
-                    </TouchableOpacity>
-                  }
-                >
-                  <Menu.Item
-                    onPress={() => handleUserTypeSelect('student')}
-                    title="Student"
-                    leadingIcon="school"
-                  />
-                  <Menu.Item
-                    onPress={() => handleUserTypeSelect('teacher')}
-                    title="Teacher"
-                    leadingIcon="briefcase"
-                  />
-                  <Menu.Item
-                    onPress={() => handleUserTypeSelect('admin')}
-                    title="Admin"
-                    leadingIcon="shield-account"
-                  />
-                </Menu>
-              </View>
-
-              {/* Grade Dropdown (Dependent on User Type) */}
-              <View style={styles.dropdownContainer}>
-                <Text style={styles.label}>Grade</Text>
-                <Menu
-                  visible={showGradeMenu}
-                  onDismiss={() => setShowGradeMenu(false)}
-                  anchor={
-                    <TouchableOpacity
-                      onPress={() => setShowGradeMenu(true)}
-                      style={styles.dropdownButton}
-                    >
-                      <Text style={styles.dropdownText}>{selectedGrade}</Text>
-                      <Icon name="chevron-down" size={20} color="#666" />
-                    </TouchableOpacity>
-                  }
-                >
-                  {gradesByUserType[selectedUserType].map((grade) => (
-                    <Menu.Item
-                      key={grade}
-                      onPress={() => {
-                        setSelectedGrade(grade);
-                        setShowGradeMenu(false);
-                      }}
-                      title={grade}
-                    />
-                  ))}
-                </Menu>
-              </View>
-            </View>
-          )}
-
-          <Divider style={styles.divider} />
-
-          {/* Grades Table */}
-          <Title style={styles.tableTitle}>
-            {isStudent ? 'Your Grades' : 'Grades List'}
-          </Title>
-          
-          {loading ? (
-            <ActivityIndicator
-              animating={true}
-              size="large"
-              style={styles.loader}
-            />
-          ) : (
-            <>
-              {/* Table Header */}
-              <View style={styles.tableHeader}>
-                <View style={styles.tableCell}>
-                  <Text style={styles.headerText}>Student</Text>
-                </View>
-                <View style={styles.tableCell}>
-                  <Text style={styles.headerText}>Subject</Text>
-                </View>
-                <View style={styles.tableCell}>
-                  <Text style={styles.headerText}>Marks</Text>
-                </View>
-                <View style={styles.tableCellAction}>
-                  <Text style={styles.headerText}>Action</Text>
-                </View>
-              </View>
-
-              {/* Table Rows */}
-              {gradesData.length > 0 ? (
-                <FlatList
-                  data={gradesData}
-                  renderItem={renderGradeRow}
-                  keyExtractor={(item, index) => {
-                    const key = item.gradeid || item.studentid || index.toString();
-                    console.log('keyExtractor: item:', item, 'generated key:', key);
-                    return key.toString();
-                  }}
-                  scrollEnabled={false}
+    <>
+      <ScrollView
+        style={styles.container}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
+        <Card style={styles.card}>
+          <Card.Content>
+            {/* Header with Title and Toggle Button */}
+            <View style={styles.headerContainer}>
+              <Title style={styles.headerTitle}>
+                {currentView === 'students'
+                  ? 'Student Directory'
+                  : 'Student Awards'}
+              </Title>
+              <TouchableOpacity
+                style={[
+                  styles.viewToggleButton,
+                  currentView === 'awards' && styles.viewToggleButtonActive,
+                ]}
+                onPress={() =>
+                  setCurrentView(currentView === 'students' ? 'awards' : 'students')
+                }
+              >
+                <Icon
+                  name={currentView === 'awards' ? 'account' : 'trophy'}
+                  size={20}
+                  color={currentView === 'awards' ? '#FFB300' : '#666'}
                 />
-              ) : (
-                <View style={styles.noDataContainer}>
-                  <Icon name="inbox" size={48} color="#ccc" />
-                  <Text style={styles.noDataText}>No grades found</Text>
-                </View>
-              )}
-            </>
-          )}
+                <Text style={styles.viewToggleButtonText}>
+                  {currentView === 'awards' ? 'Awards' : 'Students'}
+                </Text>
+              </TouchableOpacity>
+            </View>
 
-          {/* Refresh Button */}
-          <Button
-            mode="contained"
-            onPress={fetchGrades}
-            style={styles.refreshButton}
-            loading={loading}
-          >
-            Refresh
-          </Button>
-        </Card.Content>
-      </Card>
-    </ScrollView>
+            <Text style={styles.subtitle}>
+              {currentView === 'students'
+                ? `Grade ${selectedGrade} - Select a student to view details`
+                : 'View and manage student awards across all grades'}
+            </Text>
+
+            <Divider style={styles.divider} />
+
+            {currentView === 'students' ? (
+              /* ===== STUDENTS VIEW ===== */
+              <>
+                {/* Grade Filter */}
+                <View style={styles.filterContainer}>
+                  <Text style={styles.label}>Select Grade</Text>
+                  <Menu
+                    visible={showGradeMenu}
+                    onDismiss={() => setShowGradeMenu(false)}
+                    anchor={
+                      <TouchableOpacity
+                        onPress={() => setShowGradeMenu(true)}
+                        style={styles.filterButton}
+                      >
+                        <Text style={styles.filterButtonText}>
+                          Grade {selectedGrade}
+                        </Text>
+                        <Icon name="chevron-down" size={20} color="#666" />
+                      </TouchableOpacity>
+                    }
+                  >
+                    {gradeOptions.map((grade) => (
+                      <Menu.Item
+                        key={grade}
+                        onPress={() => {
+                          setSelectedGrade(grade);
+                          setShowGradeMenu(false);
+                          setSelectedStudent(null);
+                        }}
+                        title={`Grade ${grade}`}
+                      />
+                    ))}
+                  </Menu>
+                </View>
+
+                <Divider style={styles.divider} />
+
+                {/* Students List */}
+                <Text style={styles.sectionTitle}>Students in Class</Text>
+
+                {loading ? (
+                  <ActivityIndicator
+                    animating={true}
+                    size="large"
+                    style={styles.loader}
+                  />
+                ) : (
+                  <>
+                    {studentsList.length > 0 ? (
+                      <FlatList
+                        data={studentsList}
+                        renderItem={renderStudentCard}
+                        keyExtractor={(item) => item.userid?.toString()}
+                        scrollEnabled={false}
+                        style={styles.listContainer}
+                      />
+                    ) : (
+                      <View style={styles.noDataContainer}>
+                        <Icon name="inbox" size={48} color="#ccc" />
+                        <Text style={styles.noDataText}>
+                          No students found
+                        </Text>
+                      </View>
+                    )}
+                  </>
+                )}
+
+                {/* Selected Student Details & Action Buttons */}
+                {selectedStudent && (
+                  <>
+                    <Divider style={styles.divider} />
+
+                    <Card style={styles.detailsCard}>
+                      <Card.Content>
+                        <Title style={styles.detailsTitle}>
+                          {selectedStudent.firstname}{' '}
+                          {selectedStudent.lastname}
+                        </Title>
+
+                        <View style={styles.detailsGrid}>
+                          <View style={styles.detailItem}>
+                            <Text style={styles.detailLabel}>Student ID</Text>
+                            <Text style={styles.detailValue}>
+                              {selectedStudent.userid}
+                            </Text>
+                          </View>
+                          <View style={styles.detailItem}>
+                            <Text style={styles.detailLabel}>Grade/Class</Text>
+                            <Text style={styles.detailValue}>
+                              {selectedStudent.grade}
+                            </Text>
+                          </View>
+                        </View>
+
+                        <View style={styles.detailsGrid}>
+                          <View style={styles.detailItem}>
+                            <Text style={styles.detailLabel}>Email</Text>
+                            <Text
+                              style={styles.detailValue}
+                              numberOfLines={1}
+                            >
+                              {selectedStudent.email}
+                            </Text>
+                          </View>
+                          <View style={styles.detailItem}>
+                            <Text style={styles.detailLabel}>Contact</Text>
+                            <Text style={styles.detailValue}>
+                              {selectedStudent.contact}
+                            </Text>
+                          </View>
+                        </View>
+
+                        <Divider style={styles.divider} />
+
+                        <Text style={styles.actionTitle}>Quick Access</Text>
+
+                        <View style={styles.actionButtonsContainer}>
+                          <TouchableOpacity
+                            style={styles.actionButton}
+                            onPress={handleViewAttendance}
+                          >
+                            <Icon
+                              name="clipboard-check"
+                              size={32}
+                              color="#1976D2"
+                            />
+                            <Text style={styles.actionButtonLabel}>
+                              Attendance
+                            </Text>
+                          </TouchableOpacity>
+
+                          <TouchableOpacity
+                            style={styles.actionButton}
+                            onPress={handleViewExams}
+                          >
+                            <Icon
+                              name="file-document"
+                              size={32}
+                              color="#F57C00"
+                            />
+                            <Text style={styles.actionButtonLabel}>
+                              Exams
+                            </Text>
+                          </TouchableOpacity>
+
+                          <TouchableOpacity
+                            style={styles.actionButton}
+                            onPress={handleViewFeeDetails}
+                          >
+                            <Icon
+                              name="credit-card"
+                              size={32}
+                              color="#388E3C"
+                            />
+                            <Text style={styles.actionButtonLabel}>
+                              Fee Details
+                            </Text>
+                          </TouchableOpacity>
+
+                          <TouchableOpacity
+                            style={styles.actionButton}
+                            onPress={handleViewProfile}
+                          >
+                            <Icon
+                              name="account"
+                              size={32}
+                              color="#7B1FA2"
+                            />
+                            <Text style={styles.actionButtonLabel}>
+                              Profile
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+                      </Card.Content>
+                    </Card>
+                  </>
+                )}
+
+                {/* Refresh Button */}
+                <Button
+                  mode="contained"
+                  onPress={fetchStudents}
+                  style={styles.refreshButton}
+                  loading={loading}
+                >
+                  Refresh List
+                </Button>
+              </>
+            ) : (
+              /* ===== AWARDS VIEW ===== */
+              <>
+                {/* Add Award Button */}
+                <Button
+                  mode="contained"
+                  onPress={handleAddAward}
+                  style={styles.addAwardButton}
+                  icon="plus"
+                >
+                  Add Award
+                </Button>
+
+                <Divider style={styles.divider} />
+
+                {/* Awards List */}
+                <Text style={styles.sectionTitle}>Awards</Text>
+
+                {awardLoading ? (
+                  <ActivityIndicator
+                    animating={true}
+                    size="large"
+                    style={styles.loader}
+                  />
+                ) : (
+                  <>
+                    {awardsList.length > 0 ? (
+                      <ScrollView
+                        style={styles.groupedAwardsContainer}
+                        showsVerticalScrollIndicator={false}
+                      >
+                        {renderAwardsGrouped()}
+                      </ScrollView>
+                    ) : (
+                      <View style={styles.noDataContainer}>
+                        <Icon name="inbox" size={48} color="#ccc" />
+                        <Text style={styles.noDataText}>
+                          No awards found
+                        </Text>
+                      </View>
+                    )}
+                  </>
+                )}
+
+                {/* Refresh Button */}
+                <Button
+                  mode="contained"
+                  onPress={fetchAwards}
+                  style={styles.refreshButton}
+                  loading={awardLoading}
+                >
+                  Refresh Awards
+                </Button>
+              </>
+            )}
+          </Card.Content>
+        </Card>
+      </ScrollView>
+
+      {/* Add Award Modal Form */}
+      <Modal
+        visible={showAddAwardModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={handleCancelAward}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Add New Award</Text>
+              <TouchableOpacity onPress={handleCancelAward}>
+                <Icon name="close" size={24} color="#333" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalContent}>
+              <TextInput
+                label="Award Name *"
+                value={formData.awardName}
+                onChangeText={(text) =>
+                  setFormData({ ...formData, awardName: text })
+                }
+                style={styles.formInput}
+                mode="outlined"
+                placeholder="e.g., Best Student Award"
+              />
+
+              <TextInput
+                label="Student Name *"
+                value={formData.studentName}
+                onChangeText={(text) =>
+                  setFormData({ ...formData, studentName: text })
+                }
+                style={styles.formInput}
+                mode="outlined"
+                placeholder="Student name"
+              />
+
+              <TextInput
+                label="Student ID"
+                value={formData.studentId}
+                onChangeText={(text) =>
+                  setFormData({ ...formData, studentId: text })
+                }
+                style={styles.formInput}
+                mode="outlined"
+                placeholder="e.g., S001"
+              />
+
+              <TextInput
+                label="Grade *"
+                value={formData.grade}
+                onChangeText={(text) =>
+                  setFormData({ ...formData, grade: text })
+                }
+                style={styles.formInput}
+                mode="outlined"
+                placeholder="e.g., 9, 10, 11, 12"
+              />
+
+              <TextInput
+                label="Month of Award *"
+                value={formData.month}
+                onChangeText={(text) =>
+                  setFormData({ ...formData, month: text })
+                }
+                style={styles.formInput}
+                mode="outlined"
+                placeholder="e.g., March, April"
+              />
+
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Position *</Text>
+                <View style={styles.positionButtonsContainer}>
+                  {positionOptions.map((pos) => (
+                    <TouchableOpacity
+                      key={pos}
+                      style={[
+                        styles.positionButton,
+                        formData.position === pos &&
+                          styles.positionButtonActive,
+                      ]}
+                      onPress={() =>
+                        setFormData({ ...formData, position: pos })
+                      }
+                    >
+                      <Text
+                        style={[
+                          styles.positionButtonText,
+                          formData.position === pos &&
+                            styles.positionButtonTextActive,
+                        ]}
+                      >
+                        {pos}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              <TextInput
+                label="Nominated By *"
+                value={formData.nominatedBy}
+                onChangeText={(text) =>
+                  setFormData({ ...formData, nominatedBy: text })
+                }
+                style={styles.formInput}
+                mode="outlined"
+                placeholder="Name of nominator"
+              />
+
+              <Text style={styles.formNote}>* Required fields</Text>
+            </ScrollView>
+
+            <View style={styles.modalFooter}>
+              <Button
+                mode="outlined"
+                onPress={handleResetForm}
+                style={styles.modalButton}
+              >
+                Reset
+              </Button>
+              <Button
+                mode="outlined"
+                onPress={handleCancelAward}
+                style={styles.modalButton}
+              >
+                Cancel
+              </Button>
+              <Button
+                mode="contained"
+                onPress={handleSubmitAward}
+                style={[styles.modalButton, styles.submitButton]}
+              >
+                Submit
+              </Button>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </>
   );
 };
 
@@ -341,22 +1018,53 @@ const styles = StyleSheet.create({
   card: {
     marginBottom: 16,
   },
-  filtersContainer: {
+  headerContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginVertical: 12,
-    gap: 12,
+    alignItems: 'center',
+    marginBottom: 8,
   },
-  dropdownContainer: {
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#333',
     flex: 1,
+  },
+  viewToggleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 6,
+    backgroundColor: '#fff',
+    gap: 6,
+  },
+  viewToggleButtonActive: {
+    backgroundColor: '#FFF9C4',
+    borderColor: '#FFB300',
+  },
+  viewToggleButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#666',
+  },
+  subtitle: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 4,
+  },
+  filterContainer: {
+    marginVertical: 12,
   },
   label: {
     fontSize: 12,
     fontWeight: '600',
-    marginBottom: 6,
-    color: '#666',
+    marginBottom: 8,
+    color: '#333',
   },
-  dropdownButton: {
+  filterButton: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -367,27 +1075,380 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     backgroundColor: '#fff',
   },
-  dropdownText: {
+  filterButtonText: {
     fontSize: 14,
     color: '#333',
+    fontWeight: '500',
   },
   divider: {
     marginVertical: 16,
   },
-  tableTitle: {
-    marginTop: 8,
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
     marginBottom: 12,
-    fontSize: 16,
   },
-  tableHeader: {
+  listContainer: {
+    marginBottom: 12,
+  },
+  addAwardButton: {
+    backgroundColor: '#FFB300',
+    marginBottom: 12,
+  },
+  
+  /* Grouped Awards & Carousel Styles */
+  groupedAwardsContainer: {
+    marginVertical: 12,
+  },
+  awardTypeSection: {
+    marginBottom: 24,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    padding: 12,
+    borderLeftWidth: 5,
+    borderLeftColor: '#FFB300',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  awardTypeHeader: {
     flexDirection: 'row',
-    backgroundColor: '#E8F5E9',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderRadius: 4,
+    alignItems: 'center',
     marginBottom: 8,
-    borderBottomWidth: 2,
-    borderBottomColor: '#4CAF50',
+    paddingBottom: 8,
+  },
+  awardTypeIcon: {
+    marginRight: 8,
+  },
+  awardTypeTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#333',
+    flex: 1,
+  },
+  awardCountChip: {
+    backgroundColor: '#FFB300',
+    height: 24,
+  },
+  awardCountChipText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  awardTypeDivider: {
+    marginVertical: 8,
+  },
+  
+  /* Photo Carousel Styles */
+  carouselContainer: {
+    marginVertical: 12,
+    height: 260,
+  },
+  carouselContent: {
+    paddingHorizontal: 6,
+  },
+  photoItemContainer: {
+    width: 260,
+    marginHorizontal: 6,
+    height: 260,
+  },
+  photoFrame: {
+    flex: 1,
+    borderRadius: 12,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: '#FFB300',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  studentPhoto: {
+    width: '100%',
+    height: '100%',
+  },
+  photoOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  photoStudentName: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  photoAwardName: {
+    fontSize: 11,
+    color: '#FFB300',
+    marginTop: 2,
+    fontWeight: '600',
+  },
+  photoPositionBadge: {
+    alignSelf: 'flex-start',
+    marginTop: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    backgroundColor: '#666',
+  },
+  photoPositionGold: {
+    backgroundColor: '#FFD700',
+  },
+  photoPositionSilver: {
+    backgroundColor: '#C0C0C0',
+  },
+  photoPositionBronze: {
+    backgroundColor: '#CD7F32',
+  },
+  photoPositionText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#333',
+  },
+
+  /* Modal Styles */
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContainer: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '90%',
+    flexDirection: 'column',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+    backgroundColor: '#FFF9E6',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#333',
+  },
+  modalContent: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  formInput: {
+    marginBottom: 16,
+    backgroundColor: '#fafafa',
+  },
+  formGroup: {
+    marginBottom: 16,
+  },
+  formLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: 8,
+    color: '#333',
+  },
+  positionButtonsContainer: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  positionButton: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+  },
+  positionButtonActive: {
+    backgroundColor: '#FFB300',
+    borderColor: '#FFB300',
+  },
+  positionButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#666',
+  },
+  positionButtonTextActive: {
+    color: '#fff',
+  },
+  formNote: {
+    fontSize: 10,
+    color: '#999',
+    fontStyle: 'italic',
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+    backgroundColor: '#fafafa',
+  },
+  modalButton: {
+    flex: 1,
+  },
+  submitButton: {
+    backgroundColor: '#FFB300',
+  },
+
+  /* Student Styles (existing) */
+  studentCard: {
+    marginBottom: 12,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  studentCardSelected: {
+    borderColor: '#4CAF50',
+    borderWidth: 2,
+    backgroundColor: '#F1F8E9',
+  },
+  studentCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  studentInfo: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  avatar: {
+    marginRight: 12,
+  },
+  studentDetails: {
+    flex: 1,
+  },
+  studentName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
+  studentId: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: 2,
+  },
+  studentStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+  },
+  statItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  statLabel: {
+    fontSize: 10,
+    color: '#999',
+    marginBottom: 4,
+  },
+  statValue: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#333',
+  },
+  detailsCard: {
+    backgroundColor: '#FFFDE7',
+    marginBottom: 16,
+  },
+  detailsTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1976D2',
+    marginBottom: 12,
+  },
+  detailsGrid: {
+    flexDirection: 'row',
+    marginBottom: 12,
+    gap: 12,
+  },
+  detailItem: {
+    flex: 1,
+    backgroundColor: '#fff',
+    padding: 10,
+    borderRadius: 6,
+    borderLeftWidth: 4,
+    borderLeftColor: '#1976D2',
+  },
+  detailLabel: {
+    fontSize: 11,
+    color: '#999',
+    fontWeight: '500',
+    marginBottom: 2,
+  },
+  detailValue: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#333',
+  },
+  actionTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 12,
+  },
+  actionButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  actionButton: {
+    width: '22%',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    minHeight: 100,
+    justifyContent: 'center',
+  },
+  actionButtonLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#333',
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  loader: {
+    marginVertical: 20,
+  },
+  noDataContainer: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  noDataText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#999',
+  },
+  refreshButton: {
+    marginTop: 16,
+    backgroundColor: '#4CAF50',
+    marginBottom: 20,
   },
   tableRow: {
     flexDirection: 'row',
@@ -420,22 +1481,6 @@ const styles = StyleSheet.create({
     padding: 8,
     backgroundColor: '#E8F5E9',
     borderRadius: 4,
-  },
-  loader: {
-    marginVertical: 20,
-  },
-  noDataContainer: {
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  noDataText: {
-    marginTop: 12,
-    fontSize: 14,
-    color: '#999',
-  },
-  refreshButton: {
-    marginTop: 16,
-    backgroundColor: '#4CAF50',
   },
 });
 

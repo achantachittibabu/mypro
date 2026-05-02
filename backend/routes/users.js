@@ -61,12 +61,12 @@ const upload = multer({
 // GET all users
 router.get('/', async (req, res) => {
   const { usertype } = req.query;
-  logger.info('GET /users request received', { usertype });
+  //logger.info('GET /users request received', { usertype });
   try {
     const users = await User.find({ usertype: usertype }).select('-password');
     
     let enrichedUsers = users;
-    logger.info('Fetching users', { usertype });
+    //logger.info('Fetching users', { usertype });
     
     // If usertype is student, add profile and parent data
     if (usertype === 'student') {
@@ -75,11 +75,11 @@ router.get('/', async (req, res) => {
         
         // Fetch profile data related to this user
         const profile = await Profile.findOne({ userUnId: user._id.toString() });
-        logger.info('Retrieved user profile', { profile });    
+        //logger.info('Retrieved user profile', { profile });    
         
         // Fetch parent data related to this user
         const parent = await Parent.findOne({ userUnId: user._id.toString() });
-        logger.info('Retrieved user parent', { parent });
+        //logger.info('Retrieved user parent', { parent });
         
         return {
           ...userObj,
@@ -95,11 +95,11 @@ router.get('/', async (req, res) => {
         
         // Fetch profile data related to this user
         const profile = await Profile.findOne({ userUnId: user._id.toString() });
-        logger.info('Retrieved user profile', { profile });    
+        //logger.info('Retrieved user profile', { profile });    
         
         // Fetch parent data related to this user
         const parent = await Parent.findOne({ userUnId: user._id.toString() });
-        logger.info('Retrieved user parent', { parent });
+        //logger.info('Retrieved user parent', { parent });
         
 
         return {
@@ -110,7 +110,7 @@ router.get('/', async (req, res) => {
       }));
     }
     
-    logger.info('Retrieved all users', { count: enrichedUsers.length, usertype });
+    //logger.info('Retrieved all users', { count: enrichedUsers.length, usertype });
     res.json({
       success: true,
       data: enrichedUsers,
@@ -646,13 +646,13 @@ router.delete('/:id', async (req, res) => {
 // PATCH - Update user status (partial update)
 router.patch('/:id', async (req, res) => {
   try {
-    const { isActive } = req.body;
+    const { isActive, approvalstatus } = req.body;
     
-    if (isActive === undefined) {
-      logger.warn('PATCH request missing isActive field', { userId: req.params.id });
+    if (isActive === undefined && approvalstatus === undefined) {
+      logger.warn('PATCH request missing isActive or approvalstatus field', { userId: req.params.id });
       return res.status(400).json({
         success: false,
-        message: 'isActive field is required'
+        message: 'isActive or approvalstatus field is required'
       });
     }
 
@@ -665,19 +665,26 @@ router.patch('/:id', async (req, res) => {
       });
     }
 
-    // Update only the isActive field
-    user.isActive = isActive;
+    // Update fields if provided
+    if (isActive !== undefined) {
+      user.isActive = isActive;
+    }
+    if (approvalstatus !== undefined) {
+      user.approvalstatus = approvalstatus;
+    }
+    
     await user.save();
     
     logger.info('User status updated successfully', { 
       userId: req.params.id, 
       username: user.username,
-      isActive: user.isActive 
+      isActive: user.isActive,
+      approvalstatus: user.approvalstatus
     });
 
     res.json({
       success: true,
-      message: `User ${isActive ? 'enabled' : 'disabled'} successfully`,
+      message: 'User updated successfully',
       data: user
     });
   } catch (error) {
@@ -792,6 +799,74 @@ router.post('/login', async (req, res) => {
     });
   } catch (error) {
     logger.error('Error during login', error.message);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+
+// GET all pending approval users
+router.get('/:Pending', async (req, res) => {
+  const { usertype } = req.query;
+  logger.info('GET /users request received', { usertype });
+  try {
+    const users = await User.find({ usertype: usertype, approvalstatus: 'Pending' }).select('-password');
+    
+    let enrichedUsers = users;
+    logger.info('Fetching users', { usertype });
+    
+    // If usertype is student, add profile and parent data
+    if (usertype === 'student') {
+      enrichedUsers = await Promise.all(users.map(async (user) => {
+        const userObj = user.toObject ? user.toObject() : user;
+        
+        // Fetch profile data related to this user
+        const profile = await Profile.findOne({ userUnId: user._id.toString() });
+        logger.info('Retrieved user profile', { profile });    
+        
+        // Fetch parent data related to this user
+        const parent = await Parent.findOne({ userUnId: user._id.toString() });
+        logger.info('Retrieved user parent', { parent });
+        
+        return {
+          ...userObj,
+          profile: profile || null,
+          parent: parent || null
+        };
+      }));
+    }
+
+    if (usertype === 'teacher') {
+      enrichedUsers = await Promise.all(users.map(async (user) => {
+        const userObj = user.toObject ? user.toObject() : user;
+        
+        // Fetch profile data related to this user
+        const profile = await Profile.findOne({ userUnId: user._id.toString() });
+        logger.info('Retrieved user profile', { profile });    
+        
+        // Fetch parent data related to this user
+        const parent = await Parent.findOne({ userUnId: user._id.toString() });
+        logger.info('Retrieved user parent', { parent });
+        
+
+        return {
+          ...userObj,
+          profile: profile || null,
+          parent: parent || null
+        };
+      }));
+    }
+    
+    logger.info('Retrieved all users', { count: enrichedUsers.length, usertype });
+    res.json({
+      success: true,
+      data: enrichedUsers,
+      count: enrichedUsers.length
+    });
+  } catch (error) {
+    logger.error('Error retrieving users', error.message);
     res.status(500).json({
       success: false,
       message: error.message

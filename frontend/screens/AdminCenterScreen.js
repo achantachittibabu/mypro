@@ -23,7 +23,7 @@ const AdminCenterScreen = ({ navigation, route }) => {
     }
   }, [route.params]);
 
-  const adminFunctions = [
+  const adminFunctions = [ 
     {
       id: 1,
       title: 'Students',
@@ -136,13 +136,21 @@ const AdminCenterScreen = ({ navigation, route }) => {
       color: '#009688',
       screen: 'NoDueForm',
     },
+     {
+       id: 15,
+       title: 'Classes-Grades',
+       subtitle: 'Manage Classes & Grades',
+       icon: 'table-multiple',
+       color: '#607D8B',
+       screen: 'ClassesGrades',
+        },
   ];
 
   const handleFunctionPress = (item) => {
     console.log('Admin function pressed:', item.title);
-    
     try {
-      navigation.navigate(item.screen, { userData: user });
+        navigation.navigate(item.screen, { userData: user });
+      
     } catch (error) {
       console.log('Screen not yet implemented:', item.screen);
       Alert.alert(

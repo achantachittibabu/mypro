@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Modal } from 'react-native';
 import {
   View,
   Text,
@@ -20,6 +21,7 @@ import axios from 'axios';
 import * as ImagePicker from 'expo-image-picker';
 
 const AddHomepagePost = ({ navigation, route }) => {
+  const [imageModalVisible, setImageModalVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   const [postData, setPostData] = useState({
     title: '',
@@ -81,27 +83,26 @@ const AddHomepagePost = ({ navigation, route }) => {
   };
 
   const showImageOptions = () => {
-    Alert.alert(
-      'Add Image',
-      'Choose an option',
-      [
-        {
-          text: 'Take Photo',
-          onPress: handleTakePhoto,
-        },
-        {
-          text: 'Choose from Gallery',
-          onPress: handlePickImage,
-        },
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-      ]
-    );
+  setImageModalVisible(true);
+};
+
+  const prepareImageForUpload = (image) => {
+  if (!image) return null;
+
+  const fileName = image.fileName || image.uri.split('/').pop();
+  const match = /\.(\w+)$/.exec(fileName ?? '');
+  const type = match ? `image/${match[1]}` : `image`;
+
+  return {
+    uri: image.uri,
+    name: fileName,
+    type,
   };
+};
+
 
   const handleCreatePost = async () => {
+    console.log('Creating post with data:', postData);
     if (!postData.title || !postData.content) {
       Alert.alert('Validation Error', 'Please fill in title and content');
       return;
@@ -116,13 +117,14 @@ const AddHomepagePost = ({ navigation, route }) => {
       data.append('priority', postData.priority);
 
       if (postData.image) {
+        console.log('Preparing image for upload:', postData.image);
         data.append('image', {
           uri: postData.image.uri,
           type: postData.image.type,
           name: postData.image.fileName,
         });
       }
-
+      console.log('Creating post with data:', data);
       const response = await axios.post('http://127.0.0.1:5000/api/posts/', data, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
@@ -205,6 +207,8 @@ const AddHomepagePost = ({ navigation, route }) => {
               </ScrollView>
             </View>
 
+            
+            
             <View style={styles.priorityContainer}>
               <Text style={styles.label}>Priority</Text>
               <View style={styles.priorityButtons}>
@@ -234,30 +238,30 @@ const AddHomepagePost = ({ navigation, route }) => {
               </View>
             </View>
 
-            <Text style={styles.sectionTitle}>Featured Image</Text>
+            {/* IMAGE PICKER */}
+<View style={styles.imagePickerContainer}>
+  <TouchableOpacity onPress={showImageOptions}>
+    {postData.image ? (
+      <Image source={{ uri: postData.image.uri }} style={styles.selectedImage} />
+    ) : (
+      <View style={styles.imagePickerPlaceholder}>
+        <Icon name="image-plus" size={40} color="#666" />
+        <Text style={styles.imagePickerText}>Add Image</Text>
+        <Text style={styles.imagePickerSubtext}>Tap to upload</Text>
+      </View>
+    )}
+  </TouchableOpacity>
 
-            <TouchableOpacity style={styles.imagePickerContainer} onPress={showImageOptions}>
-              {postData.image ? (
-                <Image source={{ uri: postData.image.uri }} style={styles.selectedImage} />
-              ) : (
-                <View style={styles.imagePickerPlaceholder}>
-                  <Icon name="image-plus" size={50} color="#666" />
-                  <Text style={styles.imagePickerText}>Add Featured Image</Text>
-                  <Text style={styles.imagePickerSubtext}>Tap to add photo</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-
-            {postData.image && (
-              <TouchableOpacity
-                style={styles.removeImageButton}
-                onPress={() => setPostData({ ...postData, image: null })}
-              >
-                <Icon name="close-circle" size={24} color="#f44336" />
-                <Text style={styles.removeImageText}>Remove Image</Text>
-              </TouchableOpacity>
-            )}
-
+  {postData.image && (
+    <TouchableOpacity
+      style={styles.removeImageButton}
+      onPress={() => setPostData({ ...postData, image: null })}
+    >
+      <Icon name="delete" size={18} color="#f44336" />
+      <Text style={styles.removeImageText}>Remove Image</Text>
+    </TouchableOpacity>
+  )}
+</View>
             <View style={styles.formButtons}>
               <PaperButton
                 mode="outlined"
@@ -277,7 +281,52 @@ const AddHomepagePost = ({ navigation, route }) => {
             </View>
           </ScrollView>
         </Card>
+
+
       </ScrollView>
+      {/* IMAGE OPTIONS MODAL */}
+<Modal
+  visible={imageModalVisible}
+  transparent
+  animationType="slide"
+  onRequestClose={() => setImageModalVisible(false)}
+>
+  <View style={styles.modalOverlay}>
+    <View style={styles.modalContainer}>
+      <Text style={styles.modalTitle}>Add Image</Text>
+
+      <TouchableOpacity
+        style={styles.modalButton}
+        onPress={() => {
+          setImageModalVisible(false);
+          handleTakePhoto();
+        }}
+      >
+        <Icon name="camera" size={22} color="#333" />
+        <Text style={styles.modalButtonText}>Take Photo</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.modalButton}
+        onPress={() => {
+          setImageModalVisible(false);
+          handlePickImage();
+        }}
+      >
+        <Icon name="image" size={22} color="#333" />
+        <Text style={styles.modalButtonText}>Choose from Gallery</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.modalButton, { justifyContent: 'center' }]}
+        onPress={() => setImageModalVisible(false)}
+      >
+        <Text style={{ color: '#f44336', fontWeight: '600' }}>Cancel</Text>
+      </TouchableOpacity>
+    </View>
+  </View>
+</Modal>
+
     </View>
   );
 };
@@ -453,6 +502,42 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     backgroundColor: '#00BCD4',
   },
+
+  modalOverlay: {
+  flex: 1,
+  backgroundColor: 'rgba(0,0,0,0.5)',
+  justifyContent: 'flex-end',
+},
+
+modalContainer: {
+  backgroundColor: '#fff',
+  padding: 20,
+  borderTopLeftRadius: 20,
+  borderTopRightRadius: 20,
+},
+
+modalTitle: {
+  fontSize: 18,
+  fontWeight: '700',
+  marginBottom: 20,
+  textAlign: 'center',
+},
+
+modalButton: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  paddingVertical: 14,
+  borderBottomWidth: 1,
+  borderColor: '#eee',
+},
+
+modalButtonText: {
+  marginLeft: 12,
+  fontSize: 16,
+  color: '#333',
+}, 
+
+
 });
 
 export default AddHomepagePost;

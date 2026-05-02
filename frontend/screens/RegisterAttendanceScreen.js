@@ -19,7 +19,7 @@ import {
 } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import axios from 'axios';
-
+const API = "http://127.0.0.1:5000/api";
 const RegisterAttendanceScreen = ({ navigation }) => {
   const [showForm, setShowForm] = useState(false);
   const [selectedType, setSelectedType] = useState('student');
@@ -39,6 +39,9 @@ const RegisterAttendanceScreen = ({ navigation }) => {
   const [selectedTeacher, setSelectedTeacher] = useState(null);
   const [loadingTeachers, setLoadingTeachers] = useState(false);
 
+  const [classes, setClasses] = useState([]);
+  const [loadingClasses, setLoadingClasses] = useState(false);
+
   // Format date to DD/MM/YYYY
   const formatDate = (date) => {
     const day = String(date.getDate()).padStart(2, '0');
@@ -48,104 +51,105 @@ const RegisterAttendanceScreen = ({ navigation }) => {
   };
 
   // Fetch students by class
-  const fetchStudentsByClass = async (classValue) => {
+  const fetchStudentsByClass = async (classValue, dateValue) => {
+  try {
     setLoadingStudents(true);
-    try {
-      // Sample data - Replace with actual API call
-      const mockStudents = {
-        '1st class': [
-          { id: '1', name: 'Aarav Kumar', studentNumber: 'STU001', class: '1st class' },
-          { id: '2', name: 'Bhavna Singh', studentNumber: 'STU002', class: '1st class' },
-          { id: '3', name: 'Chirag Patel', studentNumber: 'STU003', class: '1st class' },
-          { id: '4', name: 'Diya Sharma', studentNumber: 'STU004', class: '1st class' },
-        ],
-        '2nd class': [
-          { id: '5', name: 'Eshan Verma', studentNumber: 'STU005', class: '2nd class' },
-          { id: '6', name: 'Fiona Roy', studentNumber: 'STU006', class: '2nd class' },
-          { id: '7', name: 'Gaurav Nair', studentNumber: 'STU007', class: '2nd class' },
-          { id: '8', name: 'Hina Khan', studentNumber: 'STU008', class: '2nd class' },
-        ],
-        '3rd class': [
-          { id: '9', name: 'Ishaan Desai', studentNumber: 'STU009', class: '3rd class' },
-          { id: '10', name: 'Jaya Menon', studentNumber: 'STU010', class: '3rd class' },
-          { id: '11', name: 'Karan Gupta', studentNumber: 'STU011', class: '3rd class' },
-          { id: '12', name: 'Lakshmi Iyer', studentNumber: 'STU012', class: '3rd class' },
-        ],
-      };
 
-      const classStudents = mockStudents[classValue] || [];
-      setStudents(classStudents);
-      setSelectedStudents({});
-    } catch (error) {
-      console.error('Error fetching students:', error);
-      Alert.alert('Error', 'Failed to load students');
-    } finally {
-      setLoadingStudents(false);
+    const response = await axios.get(
+      `${API}/users`,
+      {
+        params: {
+          class: classValue,
+          date: formatDate(dateValue),
+        },
+      }
+    );
+
+    setStudents(response.data.data || []);
+    setSelectedStudents({});
+  } catch (error) {
+    console.log("Students API error:", error?.response?.data || error.message);
+    Alert.alert("Error", "Failed to load students");
+  } finally {
+    setLoadingStudents(false);
+  }
+};
+
+
+  // Fetch classes from backend
+const fetchClasses = async () => {
+  try {
+    setLoadingClasses(true);
+
+    const response = await axios.get(`${API}/classes`);
+
+    const formattedClasses = response.data.map(cls => ({
+      id: cls._id,
+      name: cls.name
+    }));
+
+    setClasses(formattedClasses);
+
+    if (formattedClasses.length > 0) {
+      setSelectedClass(formattedClasses[0].name);
     }
-  };
+
+  } catch (error) {
+    console.log("Classes API error:", error?.response?.data || error.message);
+    Alert.alert("Error", "Failed to load classes");
+  } finally {
+    setLoadingClasses(false);
+  }
+};
 
   // Fetch teachers list
-  const fetchTeachers = async () => {
+  const fetchTeachers = async (dateValue) => {
+  try {
     setLoadingTeachers(true);
-    try {
-      // Sample data - Replace with actual API call
-      const mockTeachers = [
-        { id: '1', name: 'Mr. Rajesh Kumar' },
-        { id: '2', name: 'Ms. Priya Sharma' },
-        { id: '3', name: 'Dr. Amit Singh' },
-        { id: '4', name: 'Ms. Neha Patel' },
-        { id: '5', name: 'Mr. Vikram Verma' },
-      ];
 
-      setTeachers(mockTeachers);
-      setSelectedTeacher(null);
-    } catch (error) {
-      console.error('Error fetching teachers:', error);
-      Alert.alert('Error', 'Failed to load teachers');
-    } finally {
-      setLoadingTeachers(false);
-    }
-  };
+    const response = await axios.get(`${API}/teachers`, {
+      params: { date: formatDate(dateValue) },
+    });
+
+    setTeachers(response.data.data || []);
+    setSelectedTeacher(null);
+  } catch (error) {
+    console.log("Teachers API error:", error?.response?.data || error.message);
+    Alert.alert("Error", "Failed to load teachers");
+  } finally {
+    setLoadingTeachers(false);
+  }
+};
 
   // Load students when class changes
-  useEffect(() => {
-    if (selectedType === 'student' && showForm) {
-      fetchStudentsByClass(selectedClass);
-    } else if (selectedType === 'teacher' && showForm) {
-      fetchTeachers();
-    }
-  }, [selectedClass, selectedType, showForm]);
+useEffect(() => {
+  if (!showForm) return;
 
-  const handleTypeSelect = (type) => {
-    setSelectedType(type);
-    setShowTypeMenu(false);
-    if (type === 'student') {
-      setTeachers([]);
-      setSelectedTeacher(null);
-      fetchStudentsByClass(selectedClass);
-    } else if (type === 'teacher') {
-      setStudents([]);
-      setSelectedStudents({});
-      fetchTeachers();
-    } else {
-      setStudents([]);
-      setSelectedStudents({});
-      setTeachers([]);
-      setSelectedTeacher(null);
-    }
-  };
+  if (selectedType === "student") {
+    fetchClasses();
+  }
+
+  if (selectedType === "teacher") {
+    fetchTeachers(selectedDate);
+  }
+
+}, [selectedType, showForm]);
+
+
+// Fetch students when class/date changes (only after classes loaded)
+useEffect(() => {
+  if (!showForm || selectedType !== "student" || !selectedClass) return;
+  fetchStudentsByClass(selectedClass, selectedDate);
+}, [selectedClass, selectedDate]);
 
   const handleClassSelect = (classValue) => {
-    setSelectedClass(classValue);
-    setShowClassMenu(false);
-    if (selectedType === 'student') {
-      fetchStudentsByClass(classValue);
-    }
-  };
+  setSelectedClass(classValue);
+  setShowClassMenu(false);
+};
 
-  const handleDateChange = (date) => {
-    setSelectedDate(date);
-  };
+const handleDateChange = (date) => {
+  setSelectedDate(date);
+};
 
   const toggleStudentSelection = (studentId) => {
     setSelectedStudents((prev) => ({
@@ -154,60 +158,77 @@ const RegisterAttendanceScreen = ({ navigation }) => {
     }));
   };
 
+  const handleTypeSelect = async (type) => {
+  setSelectedType(type);
+  setShowTypeMenu(false);
+
+  // reset all previous data when type changes
+  setStudents([]);
+  setTeachers([]);
+  setSelectedStudents({});
+  setSelectedTeacher(null);
+  setClasses([]);
+  setSelectedClass("");
+
+  // 🔥 If student selected → load classes
+  if (type === "student") {
+    await fetchClasses();
+  }
+
+  // 🔥 If teacher selected → load teachers
+  if (type === "teacher") {
+    await fetchTeachers(selectedDate);
+  }
+};
+
   const handleSubmit = async () => {
-    try {
-      const checkedStudents = Object.keys(selectedStudents).filter(
-        (id) => selectedStudents[id]
-      );
+  try {
+    const checkedStudents = Object.keys(selectedStudents).filter(
+      (id) => selectedStudents[id]
+    );
 
-      if (selectedType === 'student' && checkedStudents.length === 0) {
-        Alert.alert('Error', 'Please select at least one student');
-        return;
-      }
-
-      if (selectedType === 'teacher' && !selectedTeacher) {
-        Alert.alert('Error', 'Please select a teacher');
-        return;
-      }
-
-      let messageDetails = '';
-      if (selectedType === 'student') {
-        messageDetails = `${checkedStudents.length} student(s)`;
-      } else if (selectedType === 'teacher') {
-        const teacher = teachers.find((t) => t.id === selectedTeacher);
-        messageDetails = `${teacher?.name}`;
-      } else {
-        messageDetails = `for ${selectedType}`;
-      }
-
-      console.log('Submitting attendance:', {
-        type: selectedType,
-        class: selectedClass,
-        date: formatDate(selectedDate),
-        selectedStudents: checkedStudents,
-        selectedTeacher: selectedTeacher,
-      });
-
-      Alert.alert(
-        'Success',
-        `Attendance recorded for ${messageDetails} on ${formatDate(selectedDate)}`,
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              setShowForm(false);
-              setSelectedStudents({});
-              setSelectedTeacher(null);
-              navigation.goBack();
-            },
-          },
-        ]
-      );
-    } catch (error) {
-      console.error('Error submitting attendance:', error);
-      Alert.alert('Error', 'Failed to record attendance');
+    if (selectedType === "student" && checkedStudents.length === 0) {
+      Alert.alert("Error", "Please select at least one student");
+      return;
     }
-  };
+
+    if (selectedType === "teacher" && !selectedTeacher) {
+      Alert.alert("Error", "Please select a teacher");
+      return;
+    }
+
+    const payload = {
+      type: selectedType,
+      class: selectedType === "student" ? selectedClass : null,
+      date: formatDate(selectedDate),
+      students: checkedStudents,
+      teacherId: selectedTeacher,
+    };
+
+    console.log("Submitting attendance:", payload);
+
+    await axios.post(`${API}/attendance`, payload);
+
+    Alert.alert(
+      "Success",
+      "Attendance recorded successfully",
+      [
+        {
+          text: "OK",
+          onPress: () => {
+            setShowForm(false);
+            setSelectedStudents({});
+            setSelectedTeacher(null);
+            navigation.goBack();
+          },
+        },
+      ]
+    );
+  } catch (error) {
+    console.log("Attendance submit error:", error?.response?.data || error.message);
+    Alert.alert("Error", "Failed to record attendance");
+  }
+};
 
   const renderStudentRow = ({ item }) => (
     <TouchableOpacity
@@ -304,41 +325,44 @@ const RegisterAttendanceScreen = ({ navigation }) => {
             </View>
 
             {/* Class Dropdown - Only show for students */}
-            {selectedType === 'student' && (
-              <View style={styles.formGroup}>
-                <Text style={styles.label}>Class</Text>
-                <Menu
-                  visible={showClassMenu}
-                  onDismiss={() => setShowClassMenu(false)}
-                  anchor={
-                    <TouchableOpacity
-                      onPress={() => setShowClassMenu(true)}
-                      style={styles.dropdownButton}
-                    >
-                      <Icon name="book" size={20} color="#2196F3" />
-                      <Text style={styles.dropdownText}>{selectedClass}</Text>
-                      <Icon name="chevron-down" size={20} color="#666" />
-                    </TouchableOpacity>
-                  }
-                >
-                  <Menu.Item
-                    onPress={() => handleClassSelect('1st class')}
-                    title="1st Class"
-                    leadingIcon="numeric-1-box"
-                  />
-                  <Menu.Item
-                    onPress={() => handleClassSelect('2nd class')}
-                    title="2nd Class"
-                    leadingIcon="numeric-2-box"
-                  />
-                  <Menu.Item
-                    onPress={() => handleClassSelect('3rd class')}
-                    title="3rd Class"
-                    leadingIcon="numeric-3-box"
-                  />
-                </Menu>
-              </View>
-            )}
+{selectedType === 'student' && (
+  <View style={styles.formGroup}>
+    <Text style={styles.label}>Class</Text>
+    <Menu
+      visible={showClassMenu}
+      onDismiss={() => setShowClassMenu(false)}
+      anchor={
+        <TouchableOpacity
+          onPress={() => setShowClassMenu(true)}
+          style={styles.dropdownButton}
+        >
+          <Icon name="book" size={20} color="#2196F3" />
+          <Text style={styles.dropdownText}>
+            {selectedClass || "Select Class"}
+          </Text>
+          <Icon name="chevron-down" size={20} color="#666" />
+        </TouchableOpacity>
+      }
+    >
+      {loadingClasses ? (
+        <View style={styles.menuLoadingContainer}>
+          <ActivityIndicator size="small" />
+        </View>
+      ) : classes.length > 0 ? (
+        classes.map((cls) => (
+          <Menu.Item
+            key={cls.id}
+            onPress={() => handleClassSelect(cls.name)}
+            title={cls.name}
+            leadingIcon="book"
+          />
+        ))
+      ) : (
+        <Menu.Item title="No classes found" />
+      )}
+    </Menu>
+  </View>
+)}
 
             {/* Teacher Name Dropdown - Only show for teachers */}
             {selectedType === 'teacher' && (

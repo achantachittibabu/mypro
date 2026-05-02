@@ -64,6 +64,9 @@ import MenuItemsScreen from './screens/MenuItemsScreen';
 // New Admin Screens
 import ManageTeachers from './screens/ManageTeachers';
 import ManageAdmins from './screens/ManageAdmins';
+import PendingStudentApprovals from './screens/PendingStudentApprovals';
+import PendingTeacherApprovals from './screens/PendingTeacherApprovals';
+import PendingAdminApprovals from './screens/PendingAdminApprovals';
 import RegisterStudentFees from './screens/RegisterStudentFees';
 import CreateAward from './screens/CreateAward';
 import AwardsList from './screens/AwardsList';
@@ -76,7 +79,9 @@ import ResourceAccess from './screens/ResourceAccess';
 import EnableResults from './screens/EnableResults';
 import ResetPassword from './screens/ResetPassword';
 import NoDueForm from './screens/NoDueForm';
-
+import ClassesGrades from './screens/ClassesGrades';
+import ClassScreen from './screens/ClassScreen';
+import GradeListScreen from './screens/GradeListScreen';
 const Stack = createNativeStackNavigator();
 
 export default function App() {
@@ -545,6 +550,27 @@ export default function App() {
           }}
         />
         <Stack.Screen 
+          name="PendingStudentApprovals" 
+          component={PendingStudentApprovals}
+          screenOptions={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen 
+          name="PendingTeacherApprovals" 
+          component={PendingTeacherApprovals}
+          screenOptions={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen 
+          name="PendingAdminApprovals" 
+          component={PendingAdminApprovals}
+          screenOptions={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen 
           name="RegisterStudentFees" 
           component={RegisterStudentFees}
           screenOptions={{
@@ -638,6 +664,27 @@ export default function App() {
         <Stack.Screen 
           name="TeacherDetail" 
           component={TeacherDetailScreen}
+          screenOptions={{
+          headerShown: false,
+        }}
+        />
+        <Stack.Screen 
+          name="ClassesGrades" 
+          component={ClassesGrades}
+          screenOptions={{
+          headerShown: false,
+        }}
+        />
+        <Stack.Screen 
+          name="ClassScreen" 
+          component={ClassScreen}
+          screenOptions={{
+          headerShown: false,
+        }}
+        />
+        <Stack.Screen 
+          name="GradeListScreen" 
+          component={GradeListScreen}
           screenOptions={{
           headerShown: false,
         }}

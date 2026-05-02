@@ -15,12 +15,14 @@ import { Checkbox } from 'react-native-paper';
 import * as DocumentPicker from 'expo-document-picker';
 import axios from 'axios';
 import App from '../App';
+import { Dropdown } from "react-native-element-dropdown";
 
 export default function AddStudentScreen({ navigation }) {
   useEffect(() => {
     console.log('AddStudentScreen mounted successfully');
   }, []);
-
+  const [classes, setClasses] = useState([]);
+  const [loadingClasses, setLoadingClasses] = useState(false);
   const [formData, setFormData] = useState({
     // Account Info
     email: '',
@@ -117,6 +119,29 @@ export default function AddStudentScreen({ navigation }) {
     return true;
   };
 
+  useEffect(() => {
+  fetchClasses();
+}, []);
+
+const fetchClasses = async () => {
+  try {
+    setLoadingClasses(true);
+
+    const response = await axios.get("http://127.0.0.1:5000/api/classes");
+
+    // Convert API data to dropdown format
+    const formatted = response.data.map(item => ({
+      label: item.name,
+      value: item.name,
+    }));
+
+    setClasses(formatted);
+  } catch (error) {
+    console.log("Error fetching classes:", error);
+  } finally {
+    setLoadingClasses(false);
+  }
+};
   const handleAddStudent = async () => {
     if (!validateForm()) {
       return;
@@ -456,15 +481,21 @@ export default function AddStudentScreen({ navigation }) {
         </View>
 
         <View style={styles.inputContainer}>
-          <Text style={styles.label}>Class</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter class"
-            value={formData.classValue}
-            onChangeText={(value) => updateFormData('classValue', value)}
-            editable={!loading}
-          />
-        </View>
+  <Text style={styles.label}>Class</Text>
+
+  <Dropdown
+    style={styles.dropdown}
+    placeholder={loadingClasses ? "Loading classes..." : "Select Class"}
+    data={classes}
+    labelField="label"
+    valueField="value"
+    value={formData.classValue}
+    onChange={(item) => {
+      updateFormData("classValue", item.value);
+    }}
+    disable={loading || loadingClasses}
+  />
+</View>
 
         <View style={styles.inputContainer}>
           <Text style={styles.label}>Class Teacher</Text>

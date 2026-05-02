@@ -165,12 +165,20 @@ const ManageTeachers = ({ navigation, route }) => {
           <Icon name="arrow-left" size={24} color="#333" />
         </TouchableOpacity>
         <Title style={styles.headerTitle}>Manage Teachers</Title>
-        <TouchableOpacity
-          onPress={() => navigation.navigate('AddTeacher')}
-          style={styles.addButton}
-        >
-          <Icon name="plus" size={24} color="#fff" />
-        </TouchableOpacity>
+        <View style={styles.headerButtons}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('PendingTeacherApprovals')}
+            style={[styles.addButton, styles.pendingButton]}
+          >
+            <Icon name="clock-outline" size={24} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('AddTeacher')}
+            style={styles.addButton}
+          >
+            <Icon name="plus" size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView style={styles.scrollView}>
@@ -228,6 +236,14 @@ const styles = StyleSheet.create({
     height: 40,
     alignItems: 'center',
     justifyContent: 'center',
+    marginLeft: 8,
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  pendingButton: {
+    backgroundColor: '#FF9800',
   },
   formCard: {
     margin: 12,

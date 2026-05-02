@@ -173,12 +173,20 @@ const ManageAdmins = ({ navigation, route }) => {
           <Icon name="arrow-left" size={24} color="#333" />
         </TouchableOpacity>
         <Title style={styles.headerTitle}>Manage Admins</Title>
-        <TouchableOpacity
-          onPress={() => navigation.navigate('AddAdmin')}
-          style={styles.addButton}
-        >
-          <Icon name="plus" size={24} color="#fff" />
-        </TouchableOpacity>
+        <View style={styles.headerButtons}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('PendingAdminApprovals')}
+            style={[styles.addButton, styles.pendingButton]}
+          >
+            <Icon name="clock-outline" size={24} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('AddAdmin')}
+            style={styles.addButton}
+          >
+            <Icon name="plus" size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.searchContainer}>
@@ -235,6 +243,14 @@ const styles = StyleSheet.create({
     height: 40,
     alignItems: 'center',
     justifyContent: 'center',
+    marginLeft: 8,
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  pendingButton: {
+    backgroundColor: '#FF9800',
   },
   searchContainer: {
     flexDirection: 'row',

@@ -236,14 +236,25 @@ const ManageStudents = ({ navigation, route }) => {
       </View>
 
       {/* Add New Student Button */}
-      <TouchableOpacity
-        style={styles.addNewButton}
-        onPress={() => navigation.navigate('AddStudent')}
-        disabled={loading}
-      >
-        <Icon name="plus-circle" size={24} color="#fff" />
-        <Text style={styles.addNewButtonText}>Add New Student</Text>
-      </TouchableOpacity>
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity
+          style={[styles.addNewButton, { flex: 1 }]}
+          onPress={() => navigation.navigate('AddStudent')}
+          disabled={loading}
+        >
+          <Icon name="plus-circle" size={24} color="#fff" />
+          <Text style={styles.addNewButtonText}>Add New Student</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.pendingApprovalsButton, { flex: 1, marginLeft: 8 }]}
+          onPress={() => navigation.navigate('PendingStudentApprovals')}
+          disabled={loading}
+        >
+          <Icon name="clock-outline" size={24} color="#fff" />
+          <Text style={styles.pendingApprovalsButtonText}>Pending Approvals</Text>
+        </TouchableOpacity>
+      </View>
 
       {/* Students List */}
       {loading ? (
@@ -332,6 +343,27 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   addNewButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    marginHorizontal: 15,
+    marginVertical: 12,
+    gap: 8,
+  },
+  pendingApprovalsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    backgroundColor: '#FF9800',
+    borderRadius: 8,
+    gap: 10,
+    elevation: 2,
+  },
+  pendingApprovalsButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',

@@ -565,10 +565,6 @@ const AttendanceScreen = ({ navigation, route }) => {
       <Card style={styles.headerCard}>
         <Card.Content>
           <View style={styles.headerContent}>
-            <View style={styles.headerTitleSection}>
-              <Title style={styles.headerTitle}>Attendance Management</Title>
-              <Text style={styles.headerSubtitle}>Track and manage attendance details</Text>
-            </View>
             <View style={styles.headerButtonGroup}>
               <TouchableOpacity
                 onPress={() => navigation.navigate('PendingLeaveApprovals')}
@@ -606,6 +602,9 @@ const AttendanceScreen = ({ navigation, route }) => {
                 <Text style={styles.updateAttendanceButtonText}>Update</Text>
               </TouchableOpacity>
             </View>
+          </View>
+          <View style={styles.headerTitleSection}>
+              <Text style={styles.headerSubtitle}>Track and manage attendance details</Text>
           </View>
         </Card.Content>
       </Card>
